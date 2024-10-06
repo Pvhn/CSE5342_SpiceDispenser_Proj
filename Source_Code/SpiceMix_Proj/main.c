@@ -7,6 +7,7 @@
  */
 
 #include "Utilities.h"
+#include "Stepper.h"
 
 int main(void)
 {
