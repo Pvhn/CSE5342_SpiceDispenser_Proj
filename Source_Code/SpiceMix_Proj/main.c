@@ -9,7 +9,16 @@
 #include "Utilities.h"
 #include "Stepper.h"
 
+uint32_t angle = 0;
+
 int main(void)
 {
     System_Init();
+    StepperMotorInit();
+
+    while(1)
+    {
+        MoveAugerMotor(angle);
+    }
+
 }

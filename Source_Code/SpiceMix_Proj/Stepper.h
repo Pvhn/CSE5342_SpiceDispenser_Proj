@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include "gpio.h"
 #include <tm4c123gh6pm.h>
+#include "wait.h"
 
 
 
@@ -26,7 +27,8 @@
 #define STEPSF 7.2
 #define MICROSTEPSF 0.05625
 
-#define RACKMOTOR (*((volatile uint32_t *)0x4000503C)) // PORTB0-3
+#define RACKMOTOR (*((volatile uint32_t *)0x4002403C)) // PORTB0-3
+//#define RACKMOTOR (*((volatile uint32_t *)0x4000503C)) // PORTB0-3
 #define AUGRMOTOR (*((volatile uint32_t *)0x400053C0)) // PORTB4-7
 
 /*========================================================

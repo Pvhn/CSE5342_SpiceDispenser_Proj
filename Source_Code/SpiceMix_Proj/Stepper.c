@@ -46,6 +46,19 @@ float cosarray[128] =
     0.9239, 0.9415, 0.9569, 0.9700, 0.9808, 0.9892, 0.9952, 0.9988
 };
 
+uint16_t position;
+
+void StepperMotorInit(void)
+{
+    // Enable GPIO PORTE Peripheral
+    SYSCTL_RCGCGPIO_R |= 0x0010;
+    _delay_cycles(3);
+
+    GPIO_PORTE_ODR_R &= ~0x0F;
+    GPIO_PORTE_DIR_R |= 0x0F;     // Enable PF1 as an output
+    GPIO_PORTE_DEN_R |= 0x0F;     // Set Digital Enable
+}
+
 void SetMotorSpd(uint16_t CoilASpd, uint16_t CoilBSpd)
 {
 
@@ -89,8 +102,6 @@ void MoveRackMotor(int16_t microsteps)
     bool dir1 = 0;
     bool dir2 = 0;
     uint16_t k = 0;
-    uint16_t motorspeed1 = 0;
-    uint16_t motorspeed2 = 0;
     int16_t sign = 1;
     float cosine = 0.0f;
     float sine = 0.0f;
@@ -107,9 +118,6 @@ void MoveRackMotor(int16_t microsteps)
     {
         sine = sinarray[globalstep];
         cosine = cosarray[globalstep];
-
-        motorspeed1 = abs(1023*sine);
-        motorspeed2 = abs(1023*cosine);
 
         if (sine > 0)
         {
@@ -130,7 +138,6 @@ void MoveRackMotor(int16_t microsteps)
             dir2 = 0;
         }
 
-        SetMotorSpd(motorspeed1, motorspeed2);
         RACKMOTOR = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
 
         // Increment/Decrement based on rotation
@@ -144,12 +151,72 @@ void MoveRackMotor(int16_t microsteps)
         {
             globalstep = globalstep%128;
         }
+
+        // NOTE: CONVERT THIS DELAY TO A INTERRUPT INSTEAD
+        // either using PWM or a Timer. This also removes the need for the for loop.
+        // The interrupt can instead pass a "update" flag for when the step is to be incremented
+        waitMicrosecond(200);
     }
+
+    RACKMOTOR = 0;
 }
 
 void MoveAugerMotor(uint16_t rotations)
 {
+    // Calculate position difference
+    float delta = 360*rotations;
+
+    // Convert angle to microsteps
+    uint32_t microsteps = (uint32_t) delta/ MICROSTEPSF;
+
     // Each turn of the auger dispenses x amount.
+    bool dir1 = 0;
+    bool dir2 = 0;
+    uint16_t k = 0;
+    float cosine = 0.0f;
+    float sine = 0.0f;
+
+    static int16_t globalstep = 0;
+
+
+    for (k=0; k < microsteps; k++)
+    {
+        sine = sinarray[globalstep];
+        cosine = cosarray[globalstep];
+
+        if (sine > 0)
+        {
+            dir1 = 1;
+        }
+        else
+        {
+            dir1 = 0;
+        }
+
+        if (cosine > 0)
+        {
+            dir2 = 1;
+        }
+
+        else
+        {
+            dir2 = 0;
+        }
+
+        RACKMOTOR = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
+
+        // Increment rotation
+        globalstep = (globalstep+1)%128;
+
+        // NOTE: CONVERT THIS DELAY TO A INTERRUPT INSTEAD
+        // either using PWM or a Timer. This also removes the need for the for loop.
+        // The interrupt can instead pass a "update" flag for when the step is to be incremented
+        waitMicrosecond(80);
+    }
+
+    // Once Rotation is complete, de-energize the
+    // auger motor since it does not need to be held in place.
+    RACKMOTOR = 0;
 }
 
 
