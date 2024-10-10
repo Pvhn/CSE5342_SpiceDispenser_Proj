@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "gpio.h"
-#include <tm4c123gh6pm.h>
+#include "tm4c123gh6pm.h"
 #include "wait.h"
 
 
@@ -27,15 +27,16 @@
 #define STEPSF 7.2
 #define MICROSTEPSF 0.05625
 
-#define RACKMOTOR (*((volatile uint32_t *)0x4002403C)) // PORTB0-3
-//#define RACKMOTOR (*((volatile uint32_t *)0x4000503C)) // PORTB0-3
+// Memory Alias for Motor Outputs and Hall Sensor Input
+#define RACKMOTOR (*((volatile uint32_t *)0x4000503C)) // PORTB0-3
 #define AUGRMOTOR (*((volatile uint32_t *)0x400053C0)) // PORTB4-7
+#define HALSEN (*((volatile uint32_t *)0x40024004)) // PORTE0
 
 /*========================================================
  * Variable Definitions
  *========================================================
  */
-extern uint16_t position;
+extern uint16_t rack_pos;
 extern float sinarray[128];
 extern float cosarray[128];
 
@@ -43,10 +44,14 @@ extern float cosarray[128];
  * Function Declarations
  *========================================================
  */
-extern void StepperMotorInit(void);
-extern void SetMotorAngle(uint16_t angle);
+extern void StepMotorInit(void);
+extern void StepRackHome(void);
+extern void SetRackAngle(uint16_t angle);
 extern void MoveRackMotor(int16_t microsteps);
-extern void SetMotorSpd(uint16_t CoilASpd, uint16_t CoilBSpd);
 extern void MoveAugerMotor(uint16_t rotations);
+
+extern void TestRackMotor(void);
+extern void TestAugerMotor(void);
+
 
 #endif /* STEPPER_H_ */

@@ -10,15 +10,17 @@
 #include "Stepper.h"
 
 uint32_t angle = 0;
+uint32_t rotations = 0;
 
 int main(void)
 {
     System_Init();
-    StepperMotorInit();
+    StepMotorInit();
 
     while(1)
     {
-        MoveAugerMotor(angle);
+        TestAugerMotor();
+        TestRackMotor();
     }
 
 }
