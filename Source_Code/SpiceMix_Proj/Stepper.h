@@ -27,6 +27,10 @@
 #define STEPSF 7.2
 #define MICROSTEPSF 0.05625
 
+#define PWMTICKS 1000
+#define PWMPERIOD 20e3
+#define PWMPERIODUS (1/PWMPERIOD)*10e5
+
 // Memory Alias for Motor Outputs and Hall Sensor Input
 #define RACKMOTOR (*((volatile uint32_t *)0x4000503C)) // PORTB0-3
 #define AUGRMOTOR (*((volatile uint32_t *)0x400053C0)) // PORTB4-7
@@ -36,6 +40,14 @@
  * Variable Definitions
  *========================================================
  */
+
+typedef enum
+{
+	RACK,
+	AUGER
+
+}MotorTypeEnum;
+
 extern uint16_t rack_pos;
 extern float sinarray[128];
 extern float cosarray[128];
@@ -46,6 +58,7 @@ extern float cosarray[128];
  */
 extern void StepMotorInit(void);
 extern void StepRackHome(void);
+extern void SetMotorCoilSpd(uint16_t motor, uint16_t CoilASpd, uint16_t CoilBSpd);
 extern void SetRackAngle(uint16_t angle);
 extern void MoveRackMotor(int16_t microsteps);
 extern void MoveAugerMotor(uint16_t rotations);

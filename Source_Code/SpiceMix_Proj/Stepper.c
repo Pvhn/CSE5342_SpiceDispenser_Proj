@@ -56,7 +56,8 @@ uint16_t rack_pos;
 void StepMotorInit(void)
 {
     // Enable GPIO PORTB Peripheral
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1 | SYSCTL_RCGCGPIO_R4;
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1 | SYSCTL_RCGCGPIO_R4 | SYSCTL_RCGCGPIO_R5;
+    SYSCTL_RCGCPWM_R |= SYSCTL_RCGCPWM_R1;  // enable motor
     _delay_cycles(3);
 
     // Initialize PORTB (Motor Outputs)
@@ -67,6 +68,37 @@ void StepMotorInit(void)
     // Initialize PORTE (Hall Sensor Input)
     GPIO_PORTE_DIR_R &= ~0x03;
     GPIO_PORTE_DEN_R |= 0x03;
+
+    // Initialize PORTF (PWM Control)
+    GPIO_PORTF_LOCK_R = 0x4C4F434B;
+    GPIO_PORTF_CR_R |= 0x01;
+    GPIO_PORTF_DEN_R |= 0x0F;
+    GPIO_PORTF_AFSEL_R |= 0x0F;
+    GPIO_PORTF_PCTL_R &= ~(GPIO_PCTL_PF0_M | GPIO_PCTL_PF1_M | GPIO_PCTL_PF2_M | GPIO_PCTL_PF3_M);
+    GPIO_PORTF_PCTL_R |= GPIO_PCTL_PF0_M1PWM4 | GPIO_PCTL_PF1_M1PWM5 | GPIO_PCTL_PF2_M1PWM6 | GPIO_PCTL_PF3_M1PWM7;
+
+    SYSCTL_SRPWM_R = SYSCTL_SRPWM_R1;                // reset PWM1 module
+    SYSCTL_SRPWM_R = 0;                              // leave reset state
+    PWM1_2_CTL_R = 0;                                // turn-off PWM1 generator 2 (drives outs 4 and 5)
+    PWM1_3_CTL_R = 0;                                // turn-off PWM1 generator 3 (drives outs 6 and 7)
+    
+    // output 5 on PWM1, gen 2b, cmpb, output 6 on PWM1, gen 3a, cmpa
+    PWM1_2_GENA_R = PWM_1_GENA_ACTCMPBD_ONE | PWM_1_GENA_ACTLOAD_ZERO;
+    PWM1_2_GENB_R = PWM_1_GENB_ACTCMPBD_ONE | PWM_1_GENB_ACTLOAD_ZERO;
+    PWM1_3_GENA_R = PWM_1_GENA_ACTCMPAD_ONE | PWM_1_GENA_ACTLOAD_ZERO;
+    PWM1_3_GENB_R = PWM_1_GENB_ACTCMPAD_ONE | PWM_1_GENB_ACTLOAD_ZERO;
+    
+    PWM1_2_LOAD_R = PWMTICKS;                            // set frequency to 40 MHz sys clock / 2 / 1024 = 19.53125 kHz
+    PWM1_3_LOAD_R = PWMTICKS;                            // (internal counter counts down from load value to zero)
+
+    PWM1_2_CMPA_R = 0;
+    PWM1_2_CMPB_R = 0;                               // red off (0=always low, 1023=always high)
+    PWM1_3_CMPA_R = 0;                               // blue off
+    PWM1_3_CMPB_R = 0;
+
+    PWM1_2_CTL_R = PWM_1_CTL_ENABLE;                 // turn-on PWM1 generator 2
+    PWM1_3_CTL_R = PWM_1_CTL_ENABLE;                 // turn-on PWM1 generator 3
+    PWM1_ENABLE_R = PWM_ENABLE_PWM4EN | PWM_ENABLE_PWM5EN | PWM_ENABLE_PWM6EN | PWM_ENABLE_PWM7EN;
 }
 
 void StepHome(void)
@@ -174,6 +206,8 @@ void MoveRackMotor(int16_t microsteps)
     bool dir2 = 0;
     uint16_t k = 0;
     int16_t sign = 1;
+    uint16_t coilAspd = 0;
+    uint16_t coilBspd = 0;
     float cosine = 0.0f;
     float sine = 0.0f;
 
@@ -189,6 +223,9 @@ void MoveRackMotor(int16_t microsteps)
     {
         sine = sinarray[globalstep];
         cosine = cosarray[globalstep];
+        coilAspd = abs((PWMTICKS - 1) * sine);
+        coilBspd = abs((PWMTICKS - 1) * cosine);
+        SetMotorCoilSpd(RACK, coilAspd, coilBspd);
 
         if (sine > 0)
         {
@@ -208,6 +245,7 @@ void MoveRackMotor(int16_t microsteps)
             dir2 = 0;
         }
 
+
         RACKMOTOR = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
 
         // Increment/Decrement based on rotation
@@ -223,7 +261,7 @@ void MoveRackMotor(int16_t microsteps)
         }
 
         // Increment the step at a frequency of 5kHz
-        waitMicrosecond(80);
+        waitMicrosecond(PWMPERIODUS*2);
     }
     
     // Optional: There isn't any weight on the gear shaft so the motor
@@ -244,6 +282,8 @@ void MoveAugerMotor(uint16_t rotations)
     bool dir2 = 0;
     uint16_t output = 0;
     uint16_t k = 0;
+    uint16_t coilAspd = 0;
+    uint16_t coilBspd = 0;
     float cosine = 0.0f;
     float sine = 0.0f;
 
@@ -253,6 +293,9 @@ void MoveAugerMotor(uint16_t rotations)
     {
         sine = sinarray[aug_step];
         cosine = cosarray[aug_step];
+        coilAspd = abs((PWMTICKS - 1) * sine);
+        coilBspd = abs((PWMTICKS - 1) * cosine);
+        SetMotorCoilSpd(AUGER, coilAspd, coilBspd);
 
         if (sine > 0)
         {
@@ -276,6 +319,8 @@ void MoveAugerMotor(uint16_t rotations)
         // Set the output word (bits 0-4)
         output = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
 
+
+
         // Set the actual output. Shift output by 4 to align with
         // the correct motor ports.(PB4-7)
         AUGRMOTOR = output << 4;
@@ -284,7 +329,7 @@ void MoveAugerMotor(uint16_t rotations)
         aug_step = (aug_step+1)%128;
 
         // Pulse the motor at a frequency of 12.5kHz
-        waitMicrosecond(80);
+        waitMicrosecond(PWMPERIODUS*2);
     }
 
     // Once Rotation is complete, de-energize the
@@ -293,6 +338,21 @@ void MoveAugerMotor(uint16_t rotations)
     {
         AUGRMOTOR = 0;
     }
+}
+
+void SetMotorCoilSpd(uint16_t motor, uint16_t CoilASpd, uint16_t CoilBSpd)
+{
+    if (motor == RACK)
+    {
+        PWM1_2_CMPA_R = CoilASpd;
+        PWM1_2_CMPB_R = CoilBSpd;
+    }
+    else
+    {
+        PWM1_3_CMPA_R = CoilASpd;
+        PWM1_3_CMPB_R = CoilBSpd;
+    }
+
 }
 
 void TestRackMotor(void)
