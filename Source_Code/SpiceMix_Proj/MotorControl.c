@@ -20,6 +20,9 @@ MotorDataStruct MotorData[2] =
     { AUGER, 0, AUGERMOTOR}
 };
 
+volatile bool home = false;
+volatile bool slow = false;
+
 /*========================================================
  * Function Declarations
  *========================================================
@@ -33,15 +36,17 @@ MotorDataStruct MotorData[2] =
  * Description:
  * =======================================================
  */
-void StepHome(void)
+uint16_t StepRackHome(void)
 {
     bool dir1 = 0;
     bool dir2 = 0;
-    uint16_t home = 0;
+    uint16_t output;
+    uint16_t coilAspd = 0;
+    uint16_t coilBspd = 0;
     float cosine = 0.0f;
     float sine = 0.0f;
 
-    static int16_t globalstep = 0;
+    uint16_t globalstep = 0;
 
     // De-energize the motor before homing.
     *RACKMOTOR = 0;
@@ -49,11 +54,10 @@ void StepHome(void)
 
     while (!home)
     {
-        // Set home flag to the hall sensor input
-        home = HALSEN;
-
         sine = sinarray[globalstep];
         cosine = cosarray[globalstep];
+        coilAspd = abs((PWMLOAD - 1) * sine);
+        coilBspd = abs((PWMLOAD - 1) * cosine);
 
         if (sine > 0)
         {
@@ -73,16 +77,52 @@ void StepHome(void)
             dir2 = 0;
         }
 
-        *RACKMOTOR = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
+        output = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
+
+        SetMotorCoilSpd(RACK, coilAspd, coilBspd);
+        *RACKMOTOR = output;
 
         // Increment/Decrement based on rotation
         globalstep = (globalstep + 1) & 0x7F;
 
-        waitMicrosecond(500);
+        // Decrease speed as Rack Approaches Home
+        if (slow)
+        {
+            waitMicrosecond(PWMPERIODUS * 40);
+        }
+        else
+        {
+            waitMicrosecond(PWMPERIODUS * 15);
+        }
     }
+
+    return globalstep;
 
     // Set Rack Position to 0 (Home)
     rack_pos = 0;
+}
+
+void PortDISR(void)
+{
+    uint16_t input = HALLSEN;
+    if (input == 0)
+    {
+        home = true;
+    }
+    else
+    {
+        home = false;
+        if (input == 0x1 || input == 0x02)
+        {
+            slow = true;
+        }
+        else
+        {
+            slow = false;
+        }
+    }
+
+    GPIO_PORTD_ICR_R |= HALSEN_MASK;
 }
 
 /* =======================================================

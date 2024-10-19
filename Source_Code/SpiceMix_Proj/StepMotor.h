@@ -13,29 +13,29 @@
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
 #include "wait.h"
+#include "System.h"
 
 /*========================================================
- * Preprocessor Defintions
+ * Preprocessor Definitions
  *========================================================
  */
-
-#ifndef SYSCLOCK
-	#define SYSCLOCK 40e6	// System Clock Frequency
-#endif
 
  // Scale factor for angle to full step conversion
  // Selected motor is 200 steps per full rotation. (360/200)*4
 #define MICROSTEPSF 0.05625
 
  // PWM Macros
-#define PWMFREQ 20e3	// PWM Frequency (20kHz)
+#define PWMFREQ 50e3	// PWM Frequency (50kHz)
 #define PWMLOAD (SYSCLOCK/2)/PWMFREQ // PWM Load Value 
 #define PWMPERIODUS (1/PWMFREQ)*10e5 // PWM Period in Microseconds
 
 // Memory Alias for Motor Outputs and Hall Sensor Input
 #define RACKMOTOR ((volatile uint32_t *)0x4000503C)		// PORTB0-3
 #define AUGERMOTOR ((volatile uint32_t *)0x4002503C)	// PORTF0-3
-#define HALSEN (*((volatile uint32_t *)0x4002400C))		// PORTE0/1
+#define HALLSEN (*((volatile uint32_t *)0x4000700C))		// PORTD0/1
+
+// Mask
+#define HALSEN_MASK 0x03
 
 /*========================================================
  * Variable Definitions

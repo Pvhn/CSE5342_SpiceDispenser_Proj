@@ -127,8 +127,18 @@ void HallSensorInit(void)
     _delay_cycles(3);
 
     // Initialize PORTD (Hall Sensor Input)
-    GPIO_PORTD_DIR_R &= ~0x03;  // Enable PE0/1 as Inputs
-    GPIO_PORTD_DEN_R |= 0x03;   // Set Digital Enable
+    GPIO_PORTD_DIR_R &= ~HALSEN_MASK;   // Enable PD0/1 as Inputs
+    GPIO_PORTD_DEN_R |= HALSEN_MASK;    // Set Digital Enable
+    GPIO_PORTD_PUR_R |= HALSEN_MASK;    // Set Internal Pull-Up
+
+    // Configuring GPIO Interrupts
+    GPIO_PORTD_IM_R &= ~HALSEN_MASK;    // Mask out interrupts to prevent false trip during config
+    GPIO_PORTD_IS_R &= ~HALSEN_MASK;    // Set for interrupt on edge detect
+    GPIO_PORTD_IBE_R |= HALSEN_MASK;   // Clear IBE to use only single edge detect
+    //GPIO_PORTD_IEV_R &= ~HALSEN_MASK;   // Set Falling Edge Interrupt
+    GPIO_PORTD_ICR_R |= HALSEN_MASK;    // Clear any pending Interrupts
+    GPIO_PORTD_IM_R |= HALSEN_MASK;     // Turn on Interrupts
+    NVIC_EN0_R |= 1 << (INT_GPIOD - 16);    // Enable interrupts for Port D
 }
 
 /* =======================================================
@@ -168,7 +178,7 @@ uint16_t MoveMotor(MotorDataStruct motor, int32_t microsteps, uint16_t speed)
     }
     else
     {
-        if (speed > 6)
+        if (speed > 10)
         {
             speed = 6;
         }
@@ -244,3 +254,4 @@ void SetMotorCoilSpd(MotorTypeEnum motor, uint16_t CoilASpd, uint16_t CoilBSpd)
         PWM0_1_CMPB_R = CoilBSpd;
     }
 }
+

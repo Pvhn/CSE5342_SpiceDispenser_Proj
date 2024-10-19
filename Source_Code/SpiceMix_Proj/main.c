@@ -20,6 +20,8 @@ int main(void)
     ServoInit();
     HallSensorInit();
 
+    MotorData[RACK].globalstep = StepRackHome();
+
     while(1)
     {
         SetServoPos(pos);
