@@ -1,11 +1,14 @@
-/*
- * Utilities.c
- *
- *  Author: Peter Nguyen
- *  ID: 1001495756
+/* =======================================================
+ * File Name: System.c
+ * =======================================================
+ * File Description: Contains functions and variables
+ * for overall system configuration
+ * 
+ * Target: TM4C123GH6PM w/ 40MHz Clock
+ * =======================================================
  */
 
-#include "Utilities.h"
+#include "System.h"
 
 /*=======================================================
  * Function Name: System_Init
@@ -24,13 +27,5 @@ void System_Init(void)
 
     // Set GPIO ports to use APB (not needed since default configuration -- for clarity)
     SYSCTL_GPIOHBCTL_R = 0;
-
-    // Enable GPIO PORTF Peripheral
-    SYSCTL_RCGCGPIO_R |= 0x0020;
-    _delay_cycles(3);
-
-    GPIO_PORTF_DIR_R |= 0x02;     // Enable PF1 as an output
-    GPIO_PORTF_DEN_R |= 0x02;     // Set Digital Enable
-    GPIO_PORTF_DR2R_R |= 0x02;    // Set Drive Strength to 2mA (default)
 }
 

@@ -1,24 +1,28 @@
-/*
- * main.c
- *
- *Created on: Sep 7, 2024
- *Author: Peter Nguyen
- *ID: 1001495756
+/* =======================================================
+ * File Name: main.c
+ * =======================================================
+ * File Description: Main Program File
+ * =======================================================
  */
 
-#include "Utilities.h"
-#include "Stepper.h"
+#include "System.h"
+#include "StepMotor.h"
+#include "Servo.h"
+#include "MotorControl.h"
 
-uint32_t angle = 0;
+uint16_t pos = 0;
 uint32_t rotations = 0;
 
 int main(void)
 {
     System_Init();
     StepMotorInit();
+    ServoInit();
+    HallSensorInit();
 
     while(1)
     {
+        SetServoPos(pos);
         TestAugerMotor();
         TestRackMotor();
     }
