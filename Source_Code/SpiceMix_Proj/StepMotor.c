@@ -13,7 +13,8 @@
  * Variable Definitions
  *========================================================
  */
-const float sinarray[128] =
+
+static const float sinarray[128] =
 {
     0.0000, 0.0491, 0.0980, 0.1467, 0.1951, 0.2430, 0.2903, 0.3369, 0.3827, 0.4276,
     0.4714, 0.5141, 0.5556, 0.5957, 0.6344, 0.6716, 0.7071, 0.7410, 0.7730, 0.8032,
@@ -30,7 +31,7 @@ const float sinarray[128] =
     -0.3827,-0.3369,-0.2903,-0.2430,-0.1951,-0.1467,-0.0980,-0.0491
 };
 
-const float cosarray[128] =
+static const float cosarray[128] =
 {
     1.0000, 0.9988, 0.9952, 0.9892, 0.9808, 0.9700, 0.9569, 0.9415, 0.9236, 0.9040,
     0.8816, 0.8577, 0.8315, 0.8032, 0.7730, 0.7410, 0.7071, 0.6716, 0.6344, 0.5957,
@@ -45,6 +46,13 @@ const float cosarray[128] =
     0.1951, 0.2430, 0.2903, 0.3369, 0.3827, 0.4276, 0.4714, 0.5141, 0.5556, 0.5957,
     0.6344, 0.6716, 0.7071, 0.7410, 0.7730, 0.8032, 0.8315, 0.8577, 0.8819, 0.9040,
     0.9239, 0.9415, 0.9569, 0.9700, 0.9808, 0.9892, 0.9952, 0.9988
+};
+
+// For Debugging Remove the Static
+static MotorDataStructType MotorData[2] =
+{
+    {OFF, CW, NOTHOME, 0, 0, 3},
+    {OFF, CW, NOTHOME, 0, 0, 3}
 };
 
 /*========================================================
@@ -68,12 +76,12 @@ void StepMotorInit(void)
 {
     // Enable GPIO PORTB, and PORTF
     SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1 | SYSCTL_RCGCGPIO_R5;
-    SYSCTL_RCGCPWM_R |= SYSCTL_RCGCPWM_R0;  // PWM0 Module for Motor Control
+    SYSCTL_RCGCPWM_R |= SYSCTL_RCGCPWM_R0 | SYSCTL_RCGCPWM_R1;  // PWM0 Module for Motor Control
     _delay_cycles(3);
 
     // Initialize PORTB (Motor Output and PWM Control)
-    GPIO_PORTB_DIR_R |= 0xFF;           // Enable PB0-7 as outputs
-    GPIO_PORTB_DEN_R |= 0xFF;           // Set Digital Enable
+    GPIO_PORTB_DIR_R |= 0xF0;           // Enable PB0-7 as outputs
+    GPIO_PORTB_DEN_R |= 0xF0;           // Set Digital Enable
     GPIO_PORTB_AFSEL_R |= 0xF0;         // Enable Alternate Function (for PWM) PORTB4-7
     GPIO_PORTB_PCTL_R &= ~0xFFFF0000;   // Clear bits for enabling
     GPIO_PORTB_PCTL_R |= 0x44440000;    // Enable M0PWM0-3 (PB4-7)
@@ -83,22 +91,42 @@ void StepMotorInit(void)
     GPIO_PORTF_CR_R |= 0x01;            // Unlock PORTF0
     GPIO_PORTF_DIR_R |= 0x0F;           // Enable PORTF0,1,2,3 as outputs
     GPIO_PORTF_DEN_R |= 0x0F;           // Enable PORTF0,1,2,3 as digital pins
+    GPIO_PORTF_AFSEL_R |= 0x0F;         // Enable Alternate Function (for PWM) PORTF0-3
+    GPIO_PORTF_PCTL_R &= ~0xFFFF;       // Clear bits for enabling
+    GPIO_PORTF_PCTL_R |= 0x5555;        // Enable M1PWM0-3 (PF0-3)
 
     // Initialize PWM Module 0
-    SYSCTL_SRPWM_R = SYSCTL_SRPWM_R0;   // Reset PWM1 module
+    SYSCTL_SRPWM_R = SYSCTL_SRPWM_R0 | SYSCTL_SRPWM_R1;   // Reset PWM1 module
     SYSCTL_SRPWM_R = 0;     // Turn off Reset
     PWM0_0_CTL_R = 0;       // Turn-off PWM0 Gen0 (Drives PWM0/1)
     PWM0_1_CTL_R = 0;       // Turn-off PWM0 Gen1 (Drives PWM2/3)
+    PWM1_2_CTL_R = 0;       // Turn-off PWM1 Gen0 (Drives PWM0/1)
+    PWM1_3_CTL_R = 0;       // Turn-off PWM1 Gen1 (Drives PWM2/3)
 
-    // Set for PWM high when counter = comparator. Low when = load
-    PWM0_0_GENA_R = PWM_0_GENA_ACTCMPAD_ONE | PWM_0_GENA_ACTLOAD_ZERO;
-    PWM0_0_GENB_R = PWM_0_GENB_ACTCMPBD_ONE | PWM_0_GENB_ACTLOAD_ZERO;
-    PWM0_1_GENA_R = PWM_0_GENA_ACTCMPAD_ONE | PWM_0_GENA_ACTLOAD_ZERO;
-    PWM0_1_GENB_R = PWM_0_GENB_ACTCMPBD_ONE | PWM_0_GENB_ACTLOAD_ZERO;
+    // Enable Global Sync for PWM Generators
+    PWM0_0_CTL_R |= 0x3F8; // Global Sync for any comparator/load/gen update
+    PWM0_1_CTL_R |= 0x3F8;
+    PWM1_2_CTL_R |= 0x3F8;
+    PWM1_3_CTL_R |= 0x3F8;
+
+    // Set for PWM high when counter = comparator. Low when counter = 0
+    // Generator B configured to look at comparator A
+    PWM0_0_GENA_R = PWM_0_GENA_ACTCMPAD_ONE | PWM_0_GENA_ACTZERO_ZERO;
+    PWM0_0_GENB_R = PWM_0_GENB_ACTCMPAD_ONE | PWM_0_GENB_ACTZERO_ZERO;
+    PWM0_1_GENA_R = PWM_0_GENA_ACTCMPAD_ONE | PWM_0_GENA_ACTZERO_ZERO;
+    PWM0_1_GENB_R = PWM_0_GENB_ACTCMPAD_ONE | PWM_0_GENB_ACTZERO_ZERO;
+    
+    PWM1_2_GENA_R = PWM_1_GENA_ACTCMPAD_ONE | PWM_1_GENA_ACTZERO_ZERO;
+    PWM1_2_GENB_R = PWM_1_GENB_ACTCMPAD_ONE | PWM_1_GENB_ACTZERO_ZERO;
+    PWM1_3_GENA_R = PWM_1_GENA_ACTCMPAD_ONE | PWM_1_GENA_ACTZERO_ZERO;
+    PWM1_3_GENB_R = PWM_1_GENB_ACTCMPAD_ONE | PWM_1_GENB_ACTZERO_ZERO;
 
     // Set PWM Frequency
     PWM0_0_LOAD_R = PWMLOAD; // Set PWM Frequency
     PWM0_1_LOAD_R = PWMLOAD;
+
+    PWM1_2_LOAD_R = PWMLOAD; // Set PWM Frequency
+    PWM1_3_LOAD_R = PWMLOAD;
 
     // PWM Off on Power-up (Duty cycle = 0)
     PWM0_0_CMPA_R = 0;
@@ -106,10 +134,31 @@ void StepMotorInit(void)
     PWM0_1_CMPA_R = 0;
     PWM0_1_CMPB_R = 0;
 
+    PWM1_2_CMPA_R = 0;
+    PWM1_2_CMPB_R = 0;
+    PWM1_3_CMPA_R = 0;
+    PWM1_3_CMPB_R = 0;
+
+    PWM0_INTEN_R |= 0x01;
+    PWM1_INTEN_R |= 0x04;
+    PWM0_0_INTEN_R |= 0x02; //Generate Interrupt on Load Event
+    PWM1_2_INTEN_R |= 0x02; //Generate Interrupt on Load Event
+
+    NVIC_EN0_R |= 1 << (INT_PWM0_0 - 16);   // Register the PWM0 Interrupt
+    NVIC_EN4_R |= 1 << (INT_PWM1_2 - 16-128);   // Register the PWM0 Interrupt
+    
     // Enable PWM Generators
-    PWM0_0_CTL_R = 0x01;
-    PWM0_1_CTL_R = 0x01;
-    PWM0_ENABLE_R = 0x0F; // Enable PWM0-3;
+    PWM0_0_CTL_R |= 0x01;
+    PWM0_1_CTL_R |= 0x01;
+    PWM0_ENABLE_R = 0x00; // Enable PWM0 and 1;
+
+    PWM1_2_CTL_R |= 0x01;
+    PWM1_3_CTL_R |= 0x01;
+    PWM1_ENABLE_R = 0x00;
+
+    // Sync 
+    PWM0_CTL_R = 0xF;
+    PWM1_CTL_R = 0xF;
 }
 
 /* =======================================================
@@ -134,104 +183,47 @@ void HallSensorInit(void)
     // Configuring GPIO Interrupts
     GPIO_PORTD_IM_R &= ~HALSEN_MASK;    // Mask out interrupts to prevent false trip during config
     GPIO_PORTD_IS_R &= ~HALSEN_MASK;    // Set for interrupt on edge detect
-    GPIO_PORTD_IBE_R |= HALSEN_MASK;   // Clear IBE to use only single edge detect
-    //GPIO_PORTD_IEV_R &= ~HALSEN_MASK;   // Set Falling Edge Interrupt
+    GPIO_PORTD_IBE_R |= HALSEN_MASK;   // Interrupt on both edges
     GPIO_PORTD_ICR_R |= HALSEN_MASK;    // Clear any pending Interrupts
     GPIO_PORTD_IM_R |= HALSEN_MASK;     // Turn on Interrupts
     NVIC_EN0_R |= 1 << (INT_GPIOD - 16);    // Enable interrupts for Port D
 }
 
-/* =======================================================
- * Function Name: MoveMotor
- * =======================================================
- * Parameters: motor, microsteps, speed
- * Return: globalstep
- * Description: 
- * This function will move the specified
- * motor the number of microsteps at a specified frequency.
- * Speed is a value ranging from 2 to 6 and is used to 
- * determine the frequency at which the Stepper Motor will
- * move, where 2 is the fastest, and 6 being the slowest.
- * The motor input is a data structure containing
- * information that is used to output to a specified motor.
- * The function returns a globalstep value which is used
- * to track the last coil position of the motor.
- * =======================================================
- */
-uint16_t MoveMotor(MotorDataStruct motor, int32_t microsteps, uint16_t speed)
+void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
 {
-    bool dir1 = 0;
-    bool dir2 = 0;
-    uint16_t output;
-    uint32_t k = 0;
-    int16_t sign = 1;
-    uint16_t coilAspd = 0;
-    uint16_t coilBspd = 0;
-    float cosine = 0.0f;
-    float sine = 0.0f;
-
-    uint16_t globalstep = motor.globalstep;
-
-    if (speed < 2)
+    if (speed < STEPMINPERIOD)
     {
-        speed = 2;
+        MotorData[motorID].period = STEPMINPERIOD;
     }
     else
     {
-        if (speed > 10)
-        {
-            speed = 6;
-        }
+        MotorData[motorID].period = speed;
     }
 
-    // If negative steps, flip sign for CCW rotation
     if (microsteps < 0)
     {
-        sign = -1;
+        MotorData[motorID].direction = CCW;
     }
+    
+    MotorData[motorID].steps = microsteps;
 
-    for (k = 0; k < (microsteps * sign); k++)
+    switch (motorID)
     {
-        sine = sinarray[globalstep];
-        cosine = cosarray[globalstep];
-        coilAspd = abs((PWMLOAD - 1) * sine);
-        coilBspd = abs((PWMLOAD - 1) * cosine);
-
-        if (sine > 0)
-        {
-            dir1 = 1;
-        }
-        else
-        {
-            dir1 = 0;
-        }
-
-        if (cosine > 0)
-        {
-            dir2 = 1;
-        }
-        else
-        {
-            dir2 = 0;
-        }
-
-        output = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
-
-        SetMotorCoilSpd(motor.type, coilAspd, coilBspd);
-        *(motor.output) = output;
-
-        // Increment/Decrement based on rotation
-        globalstep = (globalstep + (1 * sign)) & 0x7F;
-
-        // Increment the step
-        waitMicrosecond(PWMPERIODUS * speed);
+    case 0:
+        // Enable Load Interrupt for Gen 0
+        PWM0_0_INTEN_R |= 0x02;
+        break;
+    case 1:
+        // Enable Load Interrupt for Gen 0
+        PWM1_2_INTEN_R |= 0x02;
+        break;
+    default:
+        break;
     }
-
-    return globalstep;
 }
 
 /* =======================================================
- * Function Name: SetMotorCoilSpd
+ * Function Name: SetMotorSpd
  * =======================================================
  * Parameters: motor, CoilASpd, CoilBSpd
  * Return: None
@@ -241,17 +233,224 @@ uint16_t MoveMotor(MotorDataStruct motor, int32_t microsteps, uint16_t speed)
  * that each of the stepper motor coils will receive.
  * =======================================================
  */
-void SetMotorCoilSpd(MotorTypeEnum motor, uint16_t CoilASpd, uint16_t CoilBSpd)
+void SetMotorSpd(uint32_t motorID, uint16_t speed)
 {
-    if (motor == RACK)
+    if (speed < 2)
     {
-        PWM0_0_CMPA_R = CoilASpd;
-        PWM0_0_CMPB_R = CoilBSpd;
+        MotorData[motorID].period = 2;
     }
     else
     {
-        PWM0_1_CMPA_R = CoilASpd;
-        PWM0_1_CMPB_R = CoilBSpd;
+        MotorData[motorID].period = speed;
     }
+}
+
+void TurnOffMotor(uint32_t motorID)
+{
+    switch (motorID)
+    {
+    case 0:
+        PWM0_ENABLE_R &= ~0x0F;
+        PWM0_0_INTEN_R &= ~0x02;
+        // Sync and Update Gen0 and Gen 1
+        PWM0_CTL_R = 0x03;
+        break;
+    case 1:
+        PWM1_ENABLE_R &= ~0xF0;
+        PWM1_2_INTEN_R &= ~0x02;
+        // Sync and Update Gen0 and Gen 1
+        PWM1_CTL_R = 0x0C;
+        break;
+    default:
+        break;
+    }
+
+    MotorData[motorID].runstatus = OFF;
+}
+
+MotorRunStatEnumType GetMotorRunStatus(uint32_t motorID)
+{
+    return MotorData[motorID].runstatus;
+}
+
+MotorHomeStatEnumType GetMotorHomeStatus(uint32_t motorID)
+{
+    return MotorData[motorID].homestatus;
+}
+
+void PWM0Gen0_ISR(void)
+{
+    static const uint32_t motorID = 1;
+    static uint16_t globalstep = 0;
+    static uint32_t period_count = 0;
+    int16_t sine = 0;
+    int16_t cosine = 0;
+    MotorRunStatEnumType status = OFF;
+
+    // Create a local copy for consistency
+    uint32_t steps = MotorData[motorID].steps;
+    MotorDirEnumType dir = MotorData[motorID].direction;
+    uint32_t period = MotorData[motorID].period * 2;
+
+    // Check if motor has moved the needed amount of steps.
+    if (steps > 0)
+    {
+        status = RUNNING;
+
+        if (period_count < period)
+        {
+            sine = (sinarray[globalstep] * (PWMLOAD - 1));
+            cosine = (cosarray[globalstep] * (PWMLOAD - 1));
+
+            PWM0_0_CMPA_R = abs(sine);
+            PWM0_1_CMPA_R = abs(cosine);
+
+            if (sine > 0)
+            {
+                PWM0_ENABLE_R |= 0x1;
+                PWM0_ENABLE_R &= ~0x2;
+            }
+            else
+            {
+                PWM0_ENABLE_R &= ~0x1;
+                PWM0_ENABLE_R |= 0x2;
+            }
+
+            if (cosine > 0)
+            {
+                PWM0_ENABLE_R |= 0x4;
+                PWM0_ENABLE_R &= ~0x8;
+            }
+            else
+            {
+                PWM0_ENABLE_R &= ~0x4;
+                PWM0_ENABLE_R |= 0x8;
+            }
+
+            period_count++;
+        }
+        else
+        {
+            period_count = 0;
+            steps--;
+            globalstep = (globalstep + (1 * dir)) & 0x7F;
+        }
+    }
+    else
+    {
+        status = HALTED;
+        // Disable Load Interrupt
+        PWM0_0_INTEN_R &= ~0x02;
+    }
+
+    MotorData[motorID].runstatus = status;
+    MotorData[motorID].steps = steps;
+
+    // Sync and Update Gen0 and Gen 1
+    PWM0_CTL_R = 0x03;
+
+    // Clear Load Interrupt
+    PWM0_0_ISC_R |= 0x02;
+}
+
+void PWM1Gen2_ISR(void)
+{
+    static const uint32_t motorID = 1;
+    static uint16_t globalstep = 0;
+    static uint32_t period_count = 0;
+    int16_t sine = 0;
+    int16_t cosine = 0;
+    MotorRunStatEnumType status = OFF;
+
+    // Create a local copy for consistency
+    uint32_t steps = MotorData[motorID].steps;
+    MotorDirEnumType dir = MotorData[motorID].direction;
+    uint32_t period = MotorData[motorID].period*2;
+
+    // Check if motor has moved the needed amount of steps.
+    if (steps > 0)
+    {
+        status = RUNNING;
+
+        if(period_count < period)
+        {
+            sine = (sinarray[globalstep]*(PWMLOAD-1));
+            cosine = (cosarray[globalstep]*(PWMLOAD-1));
+
+            PWM1_2_CMPA_R = abs(sine);
+            PWM1_3_CMPA_R = abs(cosine);
+
+            if (sine > 0)
+            {
+                PWM1_ENABLE_R |= 0x10;
+                PWM1_ENABLE_R &= ~0x20;
+            }
+            else
+            {
+                PWM1_ENABLE_R &= ~0x10;
+                PWM1_ENABLE_R |= 0x20;
+            }
+
+            if (cosine > 0)
+            {
+                PWM1_ENABLE_R |= 0x40;
+                PWM1_ENABLE_R &= ~0x80;
+            }
+            else
+            {
+                PWM1_ENABLE_R &= ~0x40;
+                PWM1_ENABLE_R |= 0x80;
+            }
+            
+            period_count++;
+        }
+        else
+        {
+            period_count = 0;
+            steps--;
+            globalstep = (globalstep + (1 * dir)) & 0x7F;
+        }
+    }
+    else
+    {
+        status = HALTED;
+        // Disable Load Interrupt
+        PWM1_2_INTEN_R &= ~0x02;
+    }
+
+    MotorData[motorID].runstatus = status;
+    MotorData[motorID].steps = steps;
+
+    // Sync and Update Gen0 and Gen 1
+    PWM1_CTL_R = 0x0C;
+
+    // Clear Load Interrupt
+    PWM1_2_ISC_R |= 0x02;
+}
+
+void PortDISR(void)
+{
+    uint16_t input = HALLSEN;
+    MotorHomeStatEnumType homestatus = NOTHOME;
+
+    if (input == 0)
+    {
+        homestatus = HOME;
+    }
+    else
+    {
+        if (input == 0x1 || input == 0x02)
+        {
+            homestatus = NEARHOME;
+        }
+        else
+        {
+            homestatus = NOTHOME;
+        }
+    }
+
+    MotorData[0].homestatus = homestatus;
+
+    GPIO_PORTD_ICR_R |= HALSEN_MASK;
 }
 

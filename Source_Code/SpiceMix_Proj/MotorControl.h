@@ -28,18 +28,19 @@
  *========================================================
  */
 extern uint16_t rack_pos;
-extern MotorDataStruct MotorData[2];
 
-extern volatile bool home;
-extern volatile bool slow;
-
+typedef enum
+{
+	RACK,
+	AUGER
+}MotorTypeEnum;
 
 /*========================================================
  * Function Declarations
  *========================================================
  */
 
-extern uint16_t StepRackHome(void);
+extern void StepRackHome(void);
 
 extern void SetRackPos(uint16_t angle);
 extern void SetAugerPos(uint16_t rotations);

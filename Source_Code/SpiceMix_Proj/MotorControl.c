@@ -14,15 +14,6 @@
  */
 uint16_t rack_pos;
 
-MotorDataStruct MotorData[2] =
-{
-    { RACK, 0, RACKMOTOR},
-    { AUGER, 0, AUGERMOTOR}
-};
-
-volatile bool home = false;
-volatile bool slow = false;
-
 /*========================================================
  * Function Declarations
  *========================================================
@@ -36,93 +27,66 @@ volatile bool slow = false;
  * Description:
  * =======================================================
  */
-uint16_t StepRackHome(void)
+void StepRackHome(void)
 {
-    bool dir1 = 0;
-    bool dir2 = 0;
-    uint16_t output;
-    uint16_t coilAspd = 0;
-    uint16_t coilBspd = 0;
-    float cosine = 0.0f;
-    float sine = 0.0f;
+    MotorHomeStatEnumType home_status = NOTHOME;
+    MotorRunStatEnumType run_status = RUNNING;
+    bool nearhome_pv = false;
 
-    uint16_t globalstep = 0;
+    home_status = GetMotorHomeStatus(RACK);
 
-    // De-energize the motor before homing.
-    *RACKMOTOR = 0;
-    SetMotorCoilSpd(RACK, 0, 0);
 
-    while (!home)
+    if (home_status != HOME)
     {
-        sine = sinarray[globalstep];
-        cosine = cosarray[globalstep];
-        coilAspd = abs((PWMLOAD - 1) * sine);
-        coilBspd = abs((PWMLOAD - 1) * cosine);
+        // Command the Rack Motor to make 3 full rotations
+        CommandMotor(RACK, USTEPFULL360 * 30, 20);
 
-        if (sine > 0)
+        run_status = GetMotorRunStatus(RACK);
+        waitMicrosecond(1000);  // Wait atleast 1ms to allow motor to start running
+
+        while (home_status != HOME && run_status != HALTED)
         {
-            dir1 = 1;
+            home_status = GetMotorHomeStatus(RACK);
+            run_status = GetMotorRunStatus(RACK);
+            
+            // If Approaching Home position slow down.
+            if (home_status == NEARHOME)
+            {
+                // If first transition to near home slow down the motor
+                if (nearhome_pv == false)
+                {
+                    SetMotorSpd(RACK, 40);
+                    nearhome_pv = true;
+                }
+            }
+            else
+            {
+                // If first transition out of near home, increase speed
+                if (nearhome_pv == true)
+                {
+                    SetMotorSpd(RACK, 20);
+                    nearhome_pv = 0;
+                }
+            }
+        }
+
+        if (home_status == HOME)
+        {
+            // Reset Rack position to 0 (Home);
+            rack_pos = 0;
         }
         else
         {
-            dir1 = 0;
-        }
-
-        if (cosine > 0)
-        {
-            dir2 = 1;
-        }
-        else
-        {
-            dir2 = 0;
-        }
-
-        output = dir1 | (!dir1 << 1) | (dir2 << 2) | (!dir2 << 3);
-
-        SetMotorCoilSpd(RACK, coilAspd, coilBspd);
-        *RACKMOTOR = output;
-
-        // Increment/Decrement based on rotation
-        globalstep = (globalstep + 1) & 0x7F;
-
-        // Decrease speed as Rack Approaches Home
-        if (slow)
-        {
-            waitMicrosecond(PWMPERIODUS * 40);
-        }
-        else
-        {
-            waitMicrosecond(PWMPERIODUS * 15);
+            // Failed to find home before Motor Timeout
+            if (run_status == HALTED)
+            {
+                // Set Some Error Flag and indicate back to main program
+            }
         }
     }
 
-    return globalstep;
-
-    // Set Rack Position to 0 (Home)
-    rack_pos = 0;
-}
-
-void PortDISR(void)
-{
-    uint16_t input = HALLSEN;
-    if (input == 0)
-    {
-        home = true;
-    }
-    else
-    {
-        home = false;
-        if (input == 0x1 || input == 0x02)
-        {
-            slow = true;
-        }
-        else
-        {
-            slow = false;
-        }
-    }
-
-    GPIO_PORTD_ICR_R |= HALSEN_MASK;
+    // Reset Rack Motor Speed to default
+    SetMotorSpd(RACK, 10);
 }
 
 /* =======================================================
@@ -165,7 +129,7 @@ void SetRackPos(uint16_t angle)
     int32_t microsteps = (int32_t) delta/ MICROSTEPSF;
 
     // Command the new position
-    MotorData[RACK].globalstep = MoveMotor(MotorData[RACK], microsteps, 3);
+    CommandMotor(RACK, microsteps, 3);
 }
 
 /* =======================================================
@@ -176,19 +140,28 @@ void SetRackPos(uint16_t angle)
  * Description:
  * =======================================================
  */
+uint16_t speed = 2;
+
 void SetAugerPos(uint16_t rotations)
 {
+    MotorRunStatEnumType status = OFF;
+
     // Calculate position difference
     float delta = 360*rotations;
 
     // Convert angle to microsteps
     int32_t microsteps = (int32_t) delta/ MICROSTEPSF;
 
-    MotorData[AUGER].globalstep = MoveMotor(MotorData[AUGER], microsteps, 2);
+    CommandMotor(AUGER, microsteps, speed);
+
+    while (status != HALTED)
+    {
+        status = GetMotorRunStatus(AUGER);
+    }
 
     // De-energize the Auger Motor after moving since it
     // does not need to be held in place
-    *(MotorData[AUGER].output) = 0;
+    TurnOffMotor(AUGER);
 }
 
 /* =======================================================

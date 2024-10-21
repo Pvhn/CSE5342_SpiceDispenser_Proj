@@ -54,7 +54,10 @@ extern uint32_t __STACK_TOP;
 // External declarations for the interrupt handlers used by the application.
 //
 //*****************************************************************************
-extern void PortDISR(void); // Defined in MotorControl.c
+extern void PortDISR(void); // Defined in StepMotor.c
+
+extern void PWM0Gen0_ISR(void); // Defined in StepMotor.c
+extern void PWM1Gen2_ISR(void); // Defined in StepMotor.c
 
 //*****************************************************************************
 //
@@ -93,7 +96,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
-    IntDefaultHandler,                      // PWM Generator 0
+    PWM0Gen0_ISR,                         // PWM Generator 0
     IntDefaultHandler,                      // PWM Generator 1
     IntDefaultHandler,                      // PWM Generator 2
     IntDefaultHandler,                      // Quadrature Encoder 0
@@ -219,7 +222,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port S
     IntDefaultHandler,                      // PWM 1 Generator 0
     IntDefaultHandler,                      // PWM 1 Generator 1
-    IntDefaultHandler,                      // PWM 1 Generator 2
+    PWM1Gen2_ISR,                      // PWM 1 Generator 2
     IntDefaultHandler,                      // PWM 1 Generator 3
     IntDefaultHandler                       // PWM 1 Fault
 };

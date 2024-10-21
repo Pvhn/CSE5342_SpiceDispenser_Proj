@@ -20,13 +20,13 @@ int main(void)
     ServoInit();
     HallSensorInit();
 
-    MotorData[RACK].globalstep = StepRackHome();
-
+//    StepRackHome();
     while(1)
     {
-        SetServoPos(pos);
+
+//        SetServoPos(pos);
         TestAugerMotor();
-        TestRackMotor();
+//        TestRackMotor();
     }
 
 }
