@@ -95,6 +95,7 @@ void parseFields(USER_DATA *data)
         i++;
         last = data->buffer[i-1];
     }
+    data->fieldPosition[data->fieldCount] = i;
     //Lazy implementation
     delimitersToNULL(data->buffer);
 }
@@ -139,7 +140,7 @@ void clearBuffer(USER_DATA *data)
     uint8_t i;
     for(i = 0; i < MAX_CHARS; i++)
     {
-        data->buffer[i] = "\0";
+        data->buffer[i] = 0;
     }
     for(i = 0; i < MAX_FIELDS; i++)
     {
@@ -147,6 +148,6 @@ void clearBuffer(USER_DATA *data)
     }
     for(i = 0; i < MAX_FIELDS; i++)
     {
-        data->fieldType[i] = "\0";
+        data->fieldType[i] = 0;
     }
 }
