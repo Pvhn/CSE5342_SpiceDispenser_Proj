@@ -37,7 +37,12 @@ void initHw()
 
 void echo(USER_DATA *data)
 {
-    putsUart0(&(data->buffer[data->fieldPosition[1]]));
+    uint8_t i = 0;
+    for(i = 1; i < data->fieldCount; i++)
+    {
+        putsUart0(&(data->buffer[data->fieldPosition[i]]));
+        putsUart0(" ");
+    }
     putsUart0("\n");
 }
 
