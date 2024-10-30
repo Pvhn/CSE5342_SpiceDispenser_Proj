@@ -20,12 +20,12 @@ int main(void)
     ServoInit();
     HallSensorInit();
 
-//    StepRackHome();
+    StepRackHome();
     while(1)
     {
 
 //        SetServoPos(pos);
-        TestAugerMotor();
+//        TestAugerMotor();
 //        TestRackMotor();
     }
 

@@ -74,6 +74,8 @@ void StepRackHome(void)
         {
             // Reset Rack position to 0 (Home);
             rack_pos = 0;
+            CommandMotor(RACK, 0, 20);
+            TurnOffMotor(RACK);
         }
         else
         {
@@ -99,6 +101,8 @@ void StepRackHome(void)
  */
 void SetRackPos(uint16_t angle)
 {
+    MotorRunStatEnumType status = OFF;
+
     // Limit the angle between 0 to 359
     angle = angle % 360;
 
@@ -130,6 +134,11 @@ void SetRackPos(uint16_t angle)
 
     // Command the new position
     CommandMotor(RACK, microsteps, 3);
+
+    while (status != HALTED)
+    {
+        status = GetMotorRunStatus(RACK);
+    }
 }
 
 /* =======================================================

@@ -49,7 +49,7 @@ static const float cosarray[128] =
 };
 
 // For Debugging Remove the Static
-static MotorDataStructType MotorData[2] =
+MotorDataStructType MotorData[2] =
 {
     {OFF, CW, NOTHOME, 0, 0, 3},
     {OFF, CW, NOTHOME, 0, 0, 3}
@@ -141,8 +141,6 @@ void StepMotorInit(void)
 
     PWM0_INTEN_R |= 0x01;
     PWM1_INTEN_R |= 0x04;
-    PWM0_0_INTEN_R |= 0x02; //Generate Interrupt on Load Event
-    PWM1_2_INTEN_R |= 0x02; //Generate Interrupt on Load Event
 
     NVIC_EN0_R |= 1 << (INT_PWM0_0 - 16);   // Register the PWM0 Interrupt
     NVIC_EN4_R |= 1 << (INT_PWM1_2 - 16-128);   // Register the PWM0 Interrupt
@@ -191,6 +189,7 @@ void HallSensorInit(void)
 
 void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
 {
+    int32_t sign = 1;
     if (speed < STEPMINPERIOD)
     {
         MotorData[motorID].period = STEPMINPERIOD;
@@ -203,9 +202,14 @@ void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
     if (microsteps < 0)
     {
         MotorData[motorID].direction = CCW;
+        sign = -1;
+    }
+    else
+    {
+        MotorData[motorID].direction = CW;
     }
     
-    MotorData[motorID].steps = microsteps;
+    MotorData[motorID].steps = (uint32_t) microsteps*sign;
 
     switch (motorID)
     {
@@ -280,7 +284,7 @@ MotorHomeStatEnumType GetMotorHomeStatus(uint32_t motorID)
 
 void PWM0Gen0_ISR(void)
 {
-    static const uint32_t motorID = 1;
+    static const uint32_t motorID = 0;
     static uint16_t globalstep = 0;
     static uint32_t period_count = 0;
     int16_t sine = 0;
