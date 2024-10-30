@@ -139,6 +139,9 @@ void SetRackPos(uint16_t angle)
     {
         status = GetMotorRunStatus(RACK);
     }
+
+    //Wait half a second to let motor come to a full stop
+    waitMicrosecond(500000);
 }
 
 /* =======================================================
@@ -149,7 +152,7 @@ void SetRackPos(uint16_t angle)
  * Description:
  * =======================================================
  */
-uint16_t speed = 2;
+
 
 void SetAugerPos(uint16_t rotations)
 {
@@ -161,7 +164,7 @@ void SetAugerPos(uint16_t rotations)
     // Convert angle to microsteps
     int32_t microsteps = (int32_t) delta/ MICROSTEPSF;
 
-    CommandMotor(AUGER, microsteps, speed);
+    CommandMotor(AUGER, microsteps, 4);
 
     while (status != HALTED)
     {
@@ -171,6 +174,9 @@ void SetAugerPos(uint16_t rotations)
     // De-energize the Auger Motor after moving since it
     // does not need to be held in place
     TurnOffMotor(AUGER);
+
+    //Wait half a second to let motor come to a full stop
+    waitMicrosecond(500000);
 }
 
 /* =======================================================

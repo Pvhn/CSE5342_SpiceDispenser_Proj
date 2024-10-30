@@ -10,6 +10,7 @@
  */
 
 #include "Servo.h"
+#include "wait.h"
 
 /* =======================================================
  * Function Name: ServoInit
@@ -68,4 +69,6 @@ void SetServoPos(uint16_t angle)
 
     // Set desired duty cycle to Wide Timer 3 Match Register
     WTIMER3_TAMATCHR_R = duty;
+
+    waitMicrosecond(1000000);
 }
