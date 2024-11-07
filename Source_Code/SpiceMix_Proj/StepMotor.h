@@ -26,11 +26,9 @@
 
 #define USTEPRES 16
 #define USTEPFULL360 USTEPRES*200
-#define MICROSTEPSF 0.1125
-
+#define MICROSTEPSF 0.1125 //(Calculated as 360/(200*USTEPRES)
 
 #define MINRPM (SYSCLOCK*60)/(65535*USTEPFULL360*2)
-
 #define RPMtoLOAD (SYSCLOCK*60)/(USTEPFULL360*2)
 
 // Memory Alias for Motor Outputs and Hall Sensor Input
