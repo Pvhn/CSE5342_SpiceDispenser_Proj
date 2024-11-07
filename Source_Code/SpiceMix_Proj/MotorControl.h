@@ -29,6 +29,8 @@
  */
 extern uint16_t rack_pos;
 
+extern uint16_t speed;
+
 typedef enum
 {
 	RACK,

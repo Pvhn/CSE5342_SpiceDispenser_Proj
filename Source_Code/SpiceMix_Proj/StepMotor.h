@@ -22,21 +22,27 @@
 
  // Scale factor for angle to full step conversion
  // Selected motor is 200 steps per full rotation. (360/200)*4
-#define MICROSTEPSF 0.05625
 
-#define USTEPRES 32
-#define USTEPRESX2 USTEPRES*2
-#define USTEPFULL360 6400 // Amount of microsteps for a full rotation
 
-// PWM Macros
-#define PWMFREQ 50e3	// PWM Frequency (50kHz)
-#define PWMLOAD (SYSCLOCK/2)/PWMFREQ // PWM Load Value
-//#define PWMPERIODUS (1/PWMFREQ)*10e5 // PWM Period in Microseconds
-#define STEPMINPERIOD 2
+#define USTEPRES 16
+#define USTEPFULL360 USTEPRES*200
+#define MICROSTEPSF 0.1125
+
+
+#define MINRPM (SYSCLOCK*60)/(65535*USTEPFULL360*2)
+
+#define RPMtoLOAD (SYSCLOCK*60)/(USTEPFULL360*2)
 
 // Memory Alias for Motor Outputs and Hall Sensor Input
 //#define RACKMOTOR ((volatile uint32_t *)0x4000503C)		// PORTB0-3
 //#define AUGERMOTOR ((volatile uint32_t *)0x4002503C)	// PORTF0-3
+#define MOTOR0STEP	(*((volatile uint32_t *)(0x42000000 + (0x400053FC-0x40000000)*32 + 6*4)))
+#define MOTOR0DIR	(*((volatile uint32_t *)(0x42000000 + (0x400053FC-0x40000000)*32 + 7*4)))
+#define MOTOR0EN	(*((volatile uint32_t *)(0x42000000 + (0x400053FC-0x40000000)*32 + 5*4)))
+#define MOTOR1STEP	(*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 0*4)))
+#define MOTOR1DIR	(*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 1*4)))
+#define MOTOR1EN	(*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4)))
+
 #define HALLSEN (*((volatile uint32_t *)0x4000700C))		// PORTD0/1
 
 // Mask
@@ -64,8 +70,8 @@ typedef enum
 
 typedef enum
 {
-	CW = 1,
-	CCW = -1,
+	CW,
+	CCW
 }MotorDirEnumType;
 
 typedef struct

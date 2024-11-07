@@ -27,20 +27,25 @@ int main(void)
         {
             SetRackPos(180);
             SetServoPos(180);
-            SetAugerPos(6);
+            SetAugerPos(2);
             SetServoPos(0);
 
             SetRackPos(270);
             SetServoPos(180);
-            SetAugerPos(3);
+            SetAugerPos(1);
             SetServoPos(0);
 
-            SetRackPos(45);
+            SetRackPos(90);
             SetServoPos(180);
-            SetAugerPos(4);
+            SetAugerPos(1);
             SetServoPos(0);
 
             SetRackPos(225);
+            SetServoPos(180);
+            SetAugerPos(1);
+            SetServoPos(0);
+
+            SetRackPos(0);
             SetServoPos(180);
             SetAugerPos(1);
             SetServoPos(0);

@@ -13,6 +13,7 @@
  *========================================================
  */
 uint16_t rack_pos;
+uint16_t speed = 50;
 
 /*========================================================
  * Function Declarations
@@ -91,6 +92,7 @@ void StepRackHome(void)
     SetMotorSpd(RACK, 10);
 }
 
+
 /* =======================================================
  * Function Name:
  * =======================================================
@@ -130,10 +132,10 @@ void SetRackPos(uint16_t angle)
     // Convert angle to microsteps
     // NOTE: This will be multiplied by some gain
     // factor for the gear ratio
-    int32_t microsteps = (int32_t) delta/ MICROSTEPSF;
+    int32_t microsteps = (int32_t) delta/MICROSTEPSF;
 
     // Command the new position
-    CommandMotor(RACK, microsteps, 3);
+    CommandMotor(RACK, microsteps, speed);
 
     while (status != HALTED)
     {
@@ -162,9 +164,9 @@ void SetAugerPos(uint16_t rotations)
     float delta = 360*rotations;
 
     // Convert angle to microsteps
-    int32_t microsteps = (int32_t) delta/ MICROSTEPSF;
+    int32_t microsteps = (int32_t) delta/MICROSTEPSF;
 
-    CommandMotor(AUGER, microsteps, 4);
+    CommandMotor(AUGER, microsteps, speed);
 
     while (status != HALTED)
     {
