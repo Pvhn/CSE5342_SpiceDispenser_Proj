@@ -88,7 +88,8 @@ extern uint8_t *Read_SpiceName(uint8_t position);
 // Write functions return an error code
 extern uint16_t initSpiceData(void);
 extern uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty);
-extern uint16_t Write_Recipe(RecipeStructType recipe, uint8_t number, bool update);
+extern uint16_t Write_Recipe(RecipeStructType recipe);
+extern uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number);
 extern uint16_t Write_SpiceName(uint8_t position, uint8_t *name);
 extern uint16_t Update_RecipeName(uint8_t number, uint8_t* name);
 

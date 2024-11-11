@@ -35,9 +35,20 @@ SpiceStructType DefaultSpices[MAXSLOTS] =
  */
 
 //Forward Declaration since we don't this to be used outside of this library
-uint16_t write_NameEEProm(uint16_t offset, uint8_t* name);
+uint16_t Write_NameEEProm(uint16_t offset, uint8_t* name);
 uint8_t* Read_NameEEProm(uint16_t offset);
 
+/*=======================================================
+ * Function Name: Read_NameEEProm
+ *=======================================================
+ * Parameters: offset
+ * Return: name
+ * Description:
+ * This helper function is used to read string type data that
+ * has been stored in the EEPROM. A pointer to the
+ * read string is passed back to the calling function
+ *=======================================================
+ */
 uint8_t* Read_NameEEProm(uint16_t offset)
 {
 	// Static so that the name can be passed back to the caller
@@ -72,6 +83,18 @@ uint8_t* Read_NameEEProm(uint16_t offset)
 	return name;
 }
 
+/*=======================================================
+ * Function Name: Read_NameEEProm
+ *=======================================================
+ * Parameters: number
+ * Return: recipe
+ * Description:
+ * This function is used to read a recipe that has been
+ * stored in the EEPROM. A struct which contains the 
+ * recipe name and the various spices in it is returned
+ * to the calling function. 
+ *=======================================================
+ */
 RecipeStructType Read_Recipe(uint8_t number)
 {
 	RecipeStructType recipe = { 0, };
@@ -86,7 +109,7 @@ RecipeStructType Read_Recipe(uint8_t number)
 	//TBD Add some validation for given number.
 	// Not sure how to indicate bad number since function returns a struct
 
-	for (indx = 0; (indx <= MAXNAMESIZE) && (endofstr == false); indx = indx + 4)
+	for (indx = 0; (indx < MAXNAMESIZE) && (endofstr == false); indx = indx + 4)
 	{
 		// Store off 4 characters 
 		*((uint32_t*)(temp)) = readEeprom(offset);
@@ -107,29 +130,11 @@ RecipeStructType Read_Recipe(uint8_t number)
 		offset = offset + 1;
 	}
 
-	// Extract the spice name 4 characters at a time
-	for (indx = 0; indx <= MAXNAMESIZE; indx = indx + 4)
-	{
-		// Store off 4 characters 
-		*((uint32_t*)(recipe.Name + indx)) = readEeprom(offset);
-
-		// Check for end of string signifying to stop writing
-		if (recipe.Name[indx] == '\0')
-		{
-			break;
-		}
-
-		// Increment EEPROM Offset
-		offset = offset + 1;
-	}
-
-	//*recipe.Name = *Read_NameEEProm(offset);
-
 	// Reset Offset to Recipe Data Position
 	offset = (number * RECBLKSIZE) + RECBLKADDR + 0x04;
 
 	// Extract the recipe data 2 positions at a time
-	for (indx = 0; indx <= MAXSLOTS; indx=indx+2)
+	for (indx = 0; indx < MAXSLOTS; indx=indx+2)
 	{
 		*((uint32_t *) (recipe.Data + indx)) = readEeprom(offset);;
 	
@@ -147,6 +152,17 @@ RecipeStructType Read_Recipe(uint8_t number)
 	return recipe;
 }
 
+/*=======================================================
+ * Function Name: Read_NameEEProm
+ *=======================================================
+ * Parameters: position
+ * Return: quantity or error
+ * Description:
+ * This function is used to read the remaining quantity
+ * of a given spice position. If an invalid position
+ * was provided, an "Invalid" Error code is returned.
+ *=======================================================
+ */
 uint16_t Read_SpiceRemQty(uint8_t position)
 {
 	EEPROMDataBlockType data;
@@ -155,6 +171,12 @@ uint16_t Read_SpiceRemQty(uint8_t position)
 	uint16_t offset = position >> 1;
 
 	data.FullWord = readEeprom(SPICEDATOFST + offset);
+
+	// Validate the position is within range
+	if (position > MAXSLOTS - 1)
+	{
+		return ERRORINVALID;
+	}
 
 	// Determine the 16-bit offset and return the appropriate word
 	if ((position & 0x01) == 0)
@@ -169,6 +191,16 @@ uint16_t Read_SpiceRemQty(uint8_t position)
 	return spicedata.DataBits.quantity;
 }
 
+/*=======================================================
+ * Function Name: Read_NumofRecipes
+ *=======================================================
+ * Parameters: None
+ * Return: NumofRecipes
+ * Description:
+ * This function is used to read the amount of stored
+ * recipes in the system.
+ *=======================================================
+ */
 uint16_t Read_NumofRecipes(void)
 {
 	EEPROMDataBlockType data;
@@ -178,16 +210,48 @@ uint16_t Read_NumofRecipes(void)
 	return data.HalfWord.Lower16Bits;
 }
 
+/*=======================================================
+ * Function Name: Read_SpiceName
+ *=======================================================
+ * Parameters: position
+ * Return: *name or error
+ * Description:
+ * This function is used to read the stored spice name
+ * at a given position. A pointer to the name is returned
+ * If an invalid position is given an "Invalid" Error 
+ * code will be returned instead.
+ *=======================================================
+ */
 uint8_t* Read_SpiceName(uint8_t position)
 {
 	uint16_t offset = 0;
 
 	offset = (SPICENMOFST) + (position * 0x04);
 
+	// Validate the provided position
+	if (position > MAXSLOTS - 1)
+	{
+		return (uint8_t *) ERRORINVALID;
+	}
+
 	return Read_NameEEProm(offset);
 }
 
-uint16_t write_NameEEProm(uint16_t offset, uint8_t* name)
+/*=======================================================
+ * Function Name: Write_NameEEProm
+ *=======================================================
+ * Parameters: position, *name
+ * Return: error
+ * Description:
+ * This helper function is used to write string type
+ * data to the EEPROM. Arguments are an offset for
+ * where the string is to be written and a pointer
+ * to the string that is to be stored. In the event
+ * of some EEPROM write error, an EEPROM error code
+ * will be returned.
+ *=======================================================
+ */
+uint16_t Write_NameEEProm(uint16_t offset, uint8_t* name)
 {
 	EEPROMDataBlockType data;
 	uint16_t indx = 0;
@@ -198,7 +262,7 @@ uint16_t write_NameEEProm(uint16_t offset, uint8_t* name)
 	bool endofstr = false;
 
 	// Write the spice name 4 characters at a time
-	for (indx = 0; (indx <= MAXNAMESIZE) && (endofstr == false); indx = indx + 4)
+	for (indx = 0; (indx < MAXNAMESIZE) && (endofstr == false); indx = indx + 4)
 	{
 		// Copy 4 characters at a time. Stop if Null
 		for (x = 0; x < 4; x++)
@@ -230,6 +294,19 @@ uint16_t write_NameEEProm(uint16_t offset, uint8_t* name)
 	return error;
 }
 
+/*=======================================================
+ * Function Name: Write_SpiceRemQty
+ *=======================================================
+ * Parameters: position, qty
+ * Return: error
+ * Description:
+ * This function is used to write or update the remaining
+ * quantity of a spice at the given position. If an
+ * invalid position is given, an "Invalid" error code
+ * will be returned. In the event of some EEPROM write 
+ * error, an EEPROM error code will be returned.
+ *=======================================================
+ */
 uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 {
 	EEPROMDataBlockType eeprom_data;
@@ -246,6 +323,11 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	// since spice data is only 16 bits and we do not want to overwrite
 	// the other data.
 	eeprom_data.FullWord = readEeprom(SPICEDATOFST + offset);
+
+	if (position > MAXSLOTS - 1)
+	{
+		return ERRORINVALID;
+	}
 
 	// Determine the 16-bit offset and write to the appropriate word
 	if ((position & 0x01) == 0)
@@ -264,7 +346,15 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	return error;
 }
 
-uint16_t Write_Recipe(RecipeStructType recipe, uint8_t number, bool update)
+uint16_t Write_Recipe(RecipeStructType recipe)
+{
+	uint16_t error = 0;
+	error = Write_RecipeX(recipe, 0xDEAD);
+
+	return error;
+}
+
+uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number)
 {
 	EEPROMDataBlockType data;
 	uint16_t indx = 0;
@@ -282,8 +372,8 @@ uint16_t Write_Recipe(RecipeStructType recipe, uint8_t number, bool update)
 	}
 	else
 	{
-		// Check if update flag was given (indicating an update and not a new write)
-		if (update)
+		// Check if a specific recipe number was given and validate
+		if (number != 0xDEAD)
 		{
 			// Validate the Recipe Number is within range
 			if (number >= MAXNUMRECP)
@@ -291,19 +381,21 @@ uint16_t Write_Recipe(RecipeStructType recipe, uint8_t number, bool update)
 				return ERRORINVALID; // Return Invalid Error Code
 			}
 		}
-		// New Recipe Write
+		// No specific number given, write to next allowed position
 		else
 		{
-			number = stored_num - 1;
+			number = stored_num;
+		    // Write the remaining recipe number
+		    error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, number+1);
 		}
 	}
 
 	// Calculate offset to the Recipe Block then write
 	offset = (number * RECBLKSIZE) + RECBLKADDR;
-	error = write_NameEEProm(offset, recipe.Name);
+	error = Write_NameEEProm(offset, recipe.Name);
 
 	// Write the remaining recipe number
-	error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, number);
+
 
 	// Check if there was a write error before continuing
 	if (error != 0)
@@ -315,7 +407,7 @@ uint16_t Write_Recipe(RecipeStructType recipe, uint8_t number, bool update)
 	offset = (number * RECBLKSIZE) + RECBLKADDR + 0x04;
 
 	// Write the recipe data 2 positions at a time
-	for (indx = 0; indx <= MAXSLOTS; indx = indx + 2)
+	for (indx = 0; indx < MAXSLOTS; indx = indx + 2)
 	{
 		// Copy the data at each 32-bit word offset then write
 		data.FullWord = *((uint32_t*)(recipe.Data + indx));
@@ -347,7 +439,7 @@ uint16_t Write_SpiceName(uint8_t position, uint8_t *name)
 
 	offset = (SPICENMOFST)+(position * 0x04);
 
-	error = write_NameEEProm(offset, name);
+	error = Write_NameEEProm(offset, name);
 
 	return error;
 }
@@ -359,7 +451,7 @@ uint16_t Update_RecipeName(uint8_t number, uint8_t *name)
 
 	offset = (number * RECBLKSIZE) + RECBLKADDR;
 
-	error = write_NameEEProm(offset, name);
+	error = Write_NameEEProm(offset, name);
 
 	return error;
 }
@@ -402,6 +494,7 @@ uint16_t initSpiceData(void)
 			error = writeEeprom(SPICEDATOFST + offset, data.FullWord);
 		}
 
+		// Initialize number of recipes to 0.
 		error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
 	}
 
