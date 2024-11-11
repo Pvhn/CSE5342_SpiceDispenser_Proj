@@ -31,6 +31,9 @@
 #define MINRPM (SYSCLOCK*60)/(65535*USTEPFULL360*2)
 #define RPMtoLOAD (SYSCLOCK*60)/(USTEPFULL360*2)
 
+#define GEARRATIO 3.667
+
+
 // Memory Alias for Motor Outputs and Hall Sensor Input
 //#define RACKMOTOR ((volatile uint32_t *)0x4000503C)		// PORTB0-3
 //#define AUGERMOTOR ((volatile uint32_t *)0x4002503C)	// PORTF0-3

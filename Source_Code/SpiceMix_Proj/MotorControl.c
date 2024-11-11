@@ -132,7 +132,7 @@ void SetRackPos(uint16_t angle)
     // Convert angle to microsteps
     // NOTE: This will be multiplied by some gain
     // factor for the gear ratio
-    int32_t microsteps = (int32_t) delta/MICROSTEPSF;
+    int32_t microsteps = (int32_t) (delta/MICROSTEPSF)* GEARRATIO;
 
     // Command the new position
     CommandMotor(RACK, microsteps, speed);
