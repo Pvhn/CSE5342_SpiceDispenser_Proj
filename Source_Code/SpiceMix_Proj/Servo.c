@@ -43,6 +43,8 @@ void ServoInit(void)
     WTIMER3_TAILR_R = SYSCLOCK/ 50;      // Set Timer Frequency to 50Hz (ClockFreq/DesiredFreq)
     WTIMER3_TAV_R = 0;                  // Set Initial Value to 0
     WTIMER3_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TAPWML; // Enable the timer and invert PWM output
+
+    SetServoPos(145);
 }
 
 /* =======================================================

@@ -10,9 +10,9 @@
 #include "Servo.h"
 #include "MotorControl.h"
 
-uint16_t pos = 0;
-uint32_t rotations = 0;
+
 uint16_t new_command = false;
+
 int main(void)
 {
     System_Init();
@@ -25,35 +25,8 @@ int main(void)
     {
         if (new_command)
         {
-            SetRackPos(180);
-            SetServoPos(180);
-            SetAugerPos(2);
-            SetServoPos(0);
-
-            SetRackPos(270);
-            SetServoPos(180);
-            SetAugerPos(1);
-            SetServoPos(0);
-
-            SetRackPos(90);
-            SetServoPos(180);
-            SetAugerPos(1);
-            SetServoPos(0);
-
-            SetRackPos(225);
-            SetServoPos(180);
-            SetAugerPos(1);
-            SetServoPos(0);
-
-            SetRackPos(0);
-            SetServoPos(180);
-            SetAugerPos(1);
-            SetServoPos(0);
-            new_command = 0;
+            TestMotors();
         }
-//        SetServoPos(pos);
-//        TestAugerMotor();
-//        TestRackMotor();
     }
 
 }

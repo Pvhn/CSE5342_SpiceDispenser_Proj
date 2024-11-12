@@ -22,13 +22,13 @@
  * Preprocessor Defintions
  *========================================================
  */
-
+#define ERRORHOMEFAIL 0xDEAF
 /*========================================================
  * Variable Definitions
  *========================================================
  */
-extern uint16_t rack_pos;
 
+extern uint16_t rack_pos;
 extern uint16_t speed;
 
 typedef enum
@@ -42,12 +42,10 @@ typedef enum
  *========================================================
  */
 
-extern void StepRackHome(void);
-
+extern uint16_t StepRackHome(void);
 extern void SetRackPos(uint16_t angle);
 extern void SetAugerPos(uint16_t rotations);
 
-extern void TestRackMotor(void);
-extern void TestAugerMotor(void);
+extern void TestMotors(void);
 
 #endif /* STEPPER_H_ */

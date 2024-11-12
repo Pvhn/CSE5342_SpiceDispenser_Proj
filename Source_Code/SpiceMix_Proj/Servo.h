@@ -22,6 +22,9 @@
 #define SERVOBIAS (SYSCLOCK/50)*0.025	
 #define SERVOSF (SYSCLOCK/50)*0.1		// Scale Factor for Servo Angle Calculation
 
+#define MINSVOPOS 145
+#define MAXSVOPOS 45
+
 /*========================================================
  * Function Declarations
  *========================================================

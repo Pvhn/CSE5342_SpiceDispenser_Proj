@@ -13,7 +13,7 @@
  *========================================================
  */
 uint16_t rack_pos;
-uint16_t speed = 50;
+uint16_t speed = 20;
 
 /*========================================================
  * Function Declarations
@@ -21,21 +21,27 @@ uint16_t speed = 50;
  */
 
 /* =======================================================
- * Function Name:
+ * Function Name: StepRackHome
  * =======================================================
  * Parameters: None
  * Return: None
- * Description:
+ * Description: This function performs the homing of the
+ * main rack. The rack motor is commanded to turn until
+ * the hall sensors located at the home position, indicate
+ * the rack is "home". The home_status state is set from
+ * the hall sensor interrupt. As the rack approaches home,
+ * the rack will be slowed untill both sensors indicate
+ * home. In the event home is never indicated, an
+ * "HOME FAIL" error code will be returned
  * =======================================================
  */
-void StepRackHome(void)
+uint16_t StepRackHome(void)
 {
     MotorHomeStatEnumType home_status = NOTHOME;
     MotorRunStatEnumType run_status = RUNNING;
     bool nearhome_pv = false;
 
     home_status = GetMotorHomeStatus(RACK);
-
 
     if (home_status != HOME)
     {
@@ -56,7 +62,7 @@ void StepRackHome(void)
                 // If first transition to near home slow down the motor
                 if (nearhome_pv == false)
                 {
-                    SetMotorSpd(RACK, 40);
+                    SetMotorSpd(RACK, 8);
                     nearhome_pv = true;
                 }
             }
@@ -83,30 +89,44 @@ void StepRackHome(void)
             // Failed to find home before Motor Timeout
             if (run_status == HALTED)
             {
-                // Set Some Error Flag and indicate back to main program
+                run_status = FAILED;
+                return ERRORHOMEFAIL;
             }
         }
     }
 
     // Reset Rack Motor Speed to default
-    SetMotorSpd(RACK, 10);
+    SetMotorSpd(RACK, 20);
+
+    return 0;
 }
 
-
 /* =======================================================
- * Function Name:
+ * Function Name: SetRackPos
  * =======================================================
- * Parameters: None
+ * Parameters: pos
  * Return: None
- * Description:
+ * Description: This function will command the rack motor
+ * to turn the rack to a specified position. Based on
+ * the given position (0-7) the angle and corresponding
+ * commanded steps is calculated. The function will
+ * wait for the motor to execute and will return once
+ * all steps have been executed.
  * =======================================================
  */
-void SetRackPos(uint16_t angle)
+void SetRackPos(uint16_t pos)
 {
     MotorRunStatEnumType status = OFF;
+    uint16_t angle = 0;
 
-    // Limit the angle between 0 to 359
-    angle = angle % 360;
+    // Limit Position input
+    if (pos > 7)
+    {
+        pos = 7;
+    }
+
+    // Calculate the required angle
+    angle = pos*45;
 
     // Calculate position difference
     float delta = angle - rack_pos;
@@ -135,7 +155,7 @@ void SetRackPos(uint16_t angle)
     int32_t microsteps = (int32_t) (delta/MICROSTEPSF)* GEARRATIO;
 
     // Command the new position
-    CommandMotor(RACK, microsteps, speed);
+    CommandMotor(RACK, microsteps, 25);
 
     while (status != HALTED)
     {
@@ -147,15 +167,17 @@ void SetRackPos(uint16_t angle)
 }
 
 /* =======================================================
- * Function Name:
+ * Function Name: SetAugerPos
  * =======================================================
- * Parameters: None
+ * Parameters: rotations
  * Return: None
- * Description:
+ * Description: This function commands the auger motor
+ * to rotate a specified amount of full rotations.
+ * The function will wait for the motor to complete
+ * its command and will return once all steps have been
+ * executed.
  * =======================================================
  */
-
-
 void SetAugerPos(uint16_t rotations)
 {
     MotorRunStatEnumType status = OFF;
@@ -166,7 +188,7 @@ void SetAugerPos(uint16_t rotations)
     // Convert angle to microsteps
     int32_t microsteps = (int32_t) delta/MICROSTEPSF;
 
-    CommandMotor(AUGER, microsteps, speed);
+    CommandMotor(AUGER, microsteps, 35);
 
     while (status != HALTED)
     {
@@ -182,59 +204,27 @@ void SetAugerPos(uint16_t rotations)
 }
 
 /* =======================================================
- * Function Name:
+ * Function Name: TestMotors
  * =======================================================
  * Parameters: None
  * Return: None
- * Description:
+ * Description: This function is debugging only and allows
+ * for testing of the motrs and the hardware.
+ * A breakpoint can be used to set the desired position
+ * and rotation arguments.
  * =======================================================
  */
-void TestRackMotor(void)
+void TestMotors(void)
 {
-    SetRackPos(45);
-    waitMicrosecond(1000000);
-    SetRackPos(90);
-    waitMicrosecond(1000000);
-    SetRackPos(135);
-    waitMicrosecond(1000000);
-    SetRackPos(180);
-    waitMicrosecond(1000000);
-    SetRackPos(225);
-    waitMicrosecond(1000000);
-    SetRackPos(270);
-    waitMicrosecond(1000000);
-    SetRackPos(315);
-    waitMicrosecond(1000000);
-    SetRackPos(45);
-    waitMicrosecond(1000000);
-    SetRackPos(270);
-    waitMicrosecond(1000000);
-    SetRackPos(135);
-    waitMicrosecond(1000000);
-    SetRackPos(225);
-    waitMicrosecond(1000000);
-    SetRackPos(90);
-    waitMicrosecond(1000000);
-    SetRackPos(315);
-    waitMicrosecond(1000000);
-    SetRackPos(180);
-    waitMicrosecond(1000000);
-    SetRackPos(0);
-    waitMicrosecond(1000000);
+    uint16_t pos = 0;
+    uint32_t rotations = 0;
+    uint16_t eng_pos = 45;
+    uint16_t diseng_pos = 145;
+
+    SetRackPos(pos);
+    SetServoPos(eng_pos);
+    SetAugerPos(rotations);
+    SetServoPos(diseng_pos);
 }
 
-/* =======================================================
- * Function Name:
- * =======================================================
- * Parameters: None
- * Return: None
- * Description:
- * =======================================================
- */
-void TestAugerMotor(void)
-{
-    SetAugerPos(6);
-    waitMicrosecond(1000000);
-    SetAugerPos(6);
-    waitMicrosecond(1000000);
-}
+
