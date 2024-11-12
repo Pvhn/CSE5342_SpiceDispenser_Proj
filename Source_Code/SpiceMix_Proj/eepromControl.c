@@ -17,9 +17,10 @@
   *========================================================
   */
 
+// Default Spices
 SpiceStructType DefaultSpices[MAXSLOTS] =
 {
-	{"SALT", 0xAB00},
+	{"SALT", 0x00},
 	{"BLACKPEPPER", 0xCD01},
 	{"GARLIC", 0xEF02},
 	{"PAPRIKA", 0x1203},
@@ -27,6 +28,17 @@ SpiceStructType DefaultSpices[MAXSLOTS] =
 	{"OREGANO", 0x4505},
 	{"THYME", 0x6706},
 	{"ROSEMARY", 0x8907},
+};
+
+// Recipes for testing EEPROM
+RecipeStructType test_recipes[8] =
+{
+	{"Cajun", {0xABC0, 0xDEF5}},
+	{"Pizza", {0x1234, 0x5677, 0x89A2, 0x0021}},
+	{"5Spice", {0xBCD3, 0xFED2, 0x7654}},
+	{"BBQ", {0xDEAD, 0xBEEF, 0xFACE, 0xCAFE, 0xFEED, 0xBADE, 0xBABE, 0xDADE}},
+	{"Italian", {0xFEDC, 0xAAAA, 0xBBBB,0xDDDD, 0xEEEE}},
+	{"Medditeranean", {0x5432, 0x9876, 0x5678}},
 };
 
 /*========================================================
@@ -234,6 +246,7 @@ uint8_t* Read_SpiceName(uint8_t position)
 		return (uint8_t *) ERRORINVALID;
 	}
 
+	// Return pointer to the string
 	return Read_NameEEProm(offset);
 }
 
@@ -313,6 +326,12 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	SpiceDataType spice_data;
 	uint16_t error = 0;
 
+	// Limit the max quantity
+	if (qty > MAXQTY)
+	{
+		qty = MAXQTY;
+	}
+
 	// Divide Position by 2 to determine Word Offset
 	uint16_t offset = position >> 1;
 
@@ -346,6 +365,20 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	return error;
 }
 
+/*=======================================================
+ * Function Name: Write_Recipe
+ *=======================================================
+ * Parameters: recipe
+ * Return: error
+ * Description:
+ * This function is used to write a new recipe at the
+ * next available position in the EEPROM. If a specific
+ * recipe number is to be updated or written to, the
+ * Write_RecipeX should be used instead. See
+ * Write_RecipeX description for information on
+ * error handling
+ *=======================================================
+ */
 uint16_t Write_Recipe(RecipeStructType recipe)
 {
 	uint16_t error = 0;
@@ -354,6 +387,24 @@ uint16_t Write_Recipe(RecipeStructType recipe)
 	return error;
 }
 
+/*=======================================================
+ * Function Name: Write_RecipeX
+ *=======================================================
+ * Parameters: recipe,  number
+ * Return: error
+ * Description:
+ * This function is used to write a new recipe to the
+ * EEPROM. A number may be provided to specify a specific
+ * recipe to be updated. The function will verify that
+ * there is still enough storage left in the EEPROM
+ * to allocate the recipe. The function will return 
+ * an error code if any error occurs. This includes
+ * "Out of Memory" errors if the max amount of recipes
+ * have been reached, an "Invalid" error code if an
+ * invalid recipe number was given, or an EEPROM error
+ * code if there was an issue writing to the EEPROM.
+ *=======================================================
+ */
 uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number)
 {
 	EEPROMDataBlockType data;
@@ -394,9 +445,6 @@ uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number)
 	offset = (number * RECBLKSIZE) + RECBLKADDR;
 	error = Write_NameEEProm(offset, recipe.Name);
 
-	// Write the remaining recipe number
-
-
 	// Check if there was a write error before continuing
 	if (error != 0)
 	{
@@ -432,6 +480,17 @@ uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number)
 	return error;
 }
 
+/*=======================================================
+ * Function Name: Write_SpiceName
+ *=======================================================
+ * Parameters: position, name
+ * Return: error
+ * Description:
+ * This function writes the given spice name to the
+ * given position. An EEPROM error code is returned if
+ * there was an issue writing to the EEPROM.
+ *=======================================================
+ */
 uint16_t Write_SpiceName(uint8_t position, uint8_t *name)
 {
 	uint16_t offset = 0;
@@ -444,6 +503,17 @@ uint16_t Write_SpiceName(uint8_t position, uint8_t *name)
 	return error;
 }
 
+/*=======================================================
+ * Function Name: Update_RecipeName
+ *=======================================================
+ * Parameters: number, name
+ * Return: error
+ * Description:
+ * This function updates the name of a recipe.
+ * An error code is returned if there was an issue writing
+ * to the EEPROM.
+ *=======================================================
+ */
 uint16_t Update_RecipeName(uint8_t number, uint8_t *name)
 {
 	uint16_t offset = 0;
@@ -456,6 +526,17 @@ uint16_t Update_RecipeName(uint8_t number, uint8_t *name)
 	return error;
 }
 
+/*=======================================================
+ * Function Name:initSpiceData
+ *=======================================================
+ * Parameters: None
+ * Return: error
+ * Description:
+ * This function initializes the Spice Data Blocks
+ * in the EEPROM with the default spices and quantities
+ * when it is the first time the system has powered on. 
+ *=======================================================
+ */
 uint16_t initSpiceData(void)
 {
 	EEPROMDataBlockType FirstPowerUp;
@@ -471,17 +552,22 @@ uint16_t initSpiceData(void)
 	// initialize the EEPROM Spice Blocks using the defaults
 	if (FirstPowerUp.FullWord == 0xFFFFFFFF)
 	{
+		// Write Init Key value for next power up state.
+		error = writeEeprom(SPICEINITOFST, 0xBEEF);
+		
+		// Initialize each of the spice positions
 		for (pos = 0; pos < MAXSLOTS; pos++)
 		{
 			offset = pos >> 1;
 
+			// Write the Spice name and check for error. Abort if error.
 			error = Write_SpiceName(pos, DefaultSpices[pos].name);
-
 			if (error != 0)
 			{
 				break;
 			}
 
+			// Store the data to the appropriate upper or lower 16-bit word
 			if ((pos & 0x01) == 0)
 			{
 				data.HalfWord.Lower16Bits = DefaultSpices[pos].data.As16BitWord;
@@ -491,7 +577,12 @@ uint16_t initSpiceData(void)
 				data.HalfWord.Upper16Bits = DefaultSpices[pos].data.As16BitWord;
 			}
 
+			// Write the spice data and check for error. Abort if error
 			error = writeEeprom(SPICEDATOFST + offset, data.FullWord);
+			if (error != 0)
+			{
+				break;
+			}
 		}
 
 		// Initialize number of recipes to 0.
@@ -499,4 +590,34 @@ uint16_t initSpiceData(void)
 	}
 
 	return error;
+}
+
+/*=======================================================
+ * Function Name:TestEEPROM
+ *=======================================================
+ * Parameters: None
+ * Return: None
+ * Description:
+ * This function is for debugging purposes and is used
+ * to verify functionality of the EEPROM.
+ *=======================================================
+ */
+void TestEEPROM(void)
+{
+	int x = 0;
+	uint16_t data;
+	uint8_t* name;
+	uint16_t remrec = 0;
+	RecipeStructType recipe;
+	uint16_t error = 0;
+
+	for (x = 0; x < MAXSLOTS; x++)
+	{
+		data = Read_SpiceRemQty(x);
+		name = Read_SpiceName(x);
+		remrec = Read_NumofRecipes();
+
+		error = Write_Recipe(test_recipes[x]);
+		recipe = Read_Recipe(x);
+	}
 }

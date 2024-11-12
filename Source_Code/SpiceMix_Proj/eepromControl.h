@@ -21,21 +21,18 @@
  *========================================================
  */
 
+// Offsets to EEPROM Data blocks
 #define SPICENMOFST 0x0000
 #define SPICEDATOFST 0x0020
 #define SPICEINITOFST 0x002F
-
+#define NUMOFRECOFST 0x04
 #define RECBLKADDR 0x0030
 #define RECBLKSIZE 0x08
 
-#define NUMOFRECOFST 0x04
-
+// Max System Values
 #define MAXNAMESIZE 16
 #define MAXSLOTS 8
-
-// Error Codes
-#define ERROROOM 0xDEAD
-#define ERRORINVALID 0xBAD
+#define MAXQTY 48
 
 /* Max Number of Stored Recipes
  * Calculated as (16-3)*2. Minus 3 since the first
@@ -44,11 +41,21 @@
  */
 #define MAXNUMRECP 26
 
+// Error Codes
+#define ERROROOM 0xDEAD
+#define ERRORINVALID 0xBAD
+
+/*========================================================
+* Variable Definitions
+*========================================================
+*/
+
+// Data Union/Strucutre for storing/accessing Spice Data
 typedef union
 {
 	uint16_t As16BitWord;
 
-	struct 
+	struct
 	{
 		uint16_t position : 4;
 		uint16_t quantity : 12;
@@ -56,29 +63,24 @@ typedef union
 
 }SpiceDataType;
 
+// Struct for storing Spice Name and Data information
 typedef struct
 {
 	uint8_t name[MAXNAMESIZE];
 	SpiceDataType data;
 }SpiceStructType;
 
+// Struct for storing recipe information
 typedef struct
 {
 	uint8_t Name[MAXNAMESIZE];
 	SpiceDataType Data[8];
 }RecipeStructType;
 
-
-/*========================================================
-* Variable Definitions
-*========================================================
-*/
-
 /*========================================================
 * Function Definitions
 *========================================================
 */
-
 
 extern RecipeStructType Read_Recipe(uint8_t number);
 extern uint16_t Read_NumofRecipes(void);
@@ -92,5 +94,6 @@ extern uint16_t Write_Recipe(RecipeStructType recipe);
 extern uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number);
 extern uint16_t Write_SpiceName(uint8_t position, uint8_t *name);
 extern uint16_t Update_RecipeName(uint8_t number, uint8_t* name);
+extern void TestEEPROM(void);
 
-#endif /* MOTORCONTROL_H_ */
+#endif /* EEPROMCONTROL_H_ */

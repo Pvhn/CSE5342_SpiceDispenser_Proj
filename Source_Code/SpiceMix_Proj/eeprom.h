@@ -1,16 +1,22 @@
-// EEPROM functions
-// Jason Losh
-
-//-----------------------------------------------------------------------------
-// Hardware Target
-//-----------------------------------------------------------------------------
-
-// Target uC:       TM4C123GH6PM
-// System Clock:    -
+/* =======================================================
+ * File Name: eeprom
+ * =======================================================
+ * File Description: Header File for eeprom.c
+ * =======================================================
+ */
 
 #ifndef EEPROM_H_
 #define EEPROM_H_
 
+#include <stdint.h>
+#include "tm4c123gh6pm.h"
+
+/*========================================================
+ * Variable Definitions
+ *========================================================
+ */
+
+// Union/Struct for accessing EEPROM data as 32-bit and 16-bit words.
 typedef union
 {
 	uint32_t FullWord;
@@ -23,9 +29,10 @@ typedef union
 
 }EEPROMDataBlockType;
 
-//-----------------------------------------------------------------------------
-// Subroutines
-//-----------------------------------------------------------------------------
+/*========================================================
+ * Function Declarations
+ *========================================================
+ */
 
 void initEeprom();
 uint16_t writeEeprom(uint16_t add, uint32_t data);
