@@ -50,7 +50,7 @@
 *========================================================
 */
 
-// Data Union/Strucutre for storing/accessing Spice Data
+// Data Union/Structure for storing/accessing Spice Data
 typedef union
 {
 	uint16_t As16BitWord;
@@ -74,7 +74,7 @@ typedef struct
 typedef struct
 {
 	uint8_t Name[MAXNAMESIZE];
-	SpiceDataType Data[8];
+	SpiceDataType Data[MAXSLOTS];
 }RecipeStructType;
 
 /*========================================================

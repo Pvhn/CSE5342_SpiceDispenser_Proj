@@ -29,7 +29,7 @@ uint16_t rack_pos;
  * the hall sensors located at the home position, indicate
  * the rack is "home". The home_status state is set from
  * the hall sensor interrupt. As the rack approaches home,
- * the rack will be slowed untill both sensors indicate
+ * the rack will be slowed until both sensors indicate
  * home. In the event home is never indicated, an
  * "HOME FAIL" error code will be returned
  * =======================================================
