@@ -45,7 +45,7 @@ uint16_t StepRackHome(void)
     if (home_status != HOME)
     {
         // Command the Rack Motor to make 3 full rotations
-        CommandMotor(RACK, USTEPFULL360 * 30, 20);
+        CommandMotor(RACK, USTEPFULL360 * 30, 15);
 
         run_status = GetMotorRunStatus(RACK);
         waitMicrosecond(1000);  // Wait atleast 1ms to allow motor to start running
@@ -61,7 +61,7 @@ uint16_t StepRackHome(void)
                 // If first transition to near home slow down the motor
                 if (nearhome_pv == false)
                 {
-                    SetMotorSpd(RACK, 8);
+                    SetMotorSpd(RACK, 6);
                     nearhome_pv = true;
                 }
             }
@@ -70,7 +70,7 @@ uint16_t StepRackHome(void)
                 // If first transition out of near home, increase speed
                 if (nearhome_pv == true)
                 {
-                    SetMotorSpd(RACK, 20);
+                    SetMotorSpd(RACK, 15);
                     nearhome_pv = 0;
                 }
             }
@@ -80,8 +80,8 @@ uint16_t StepRackHome(void)
         {
             // Reset Rack position to 0 (Home);
             rack_pos = 0;
-            CommandMotor(RACK, 0, 20);
-            TurnOffMotor(RACK);
+            CommandMotor(RACK, 0, 10);
+            //TurnOffMotor(RACK);
         }
         else
         {

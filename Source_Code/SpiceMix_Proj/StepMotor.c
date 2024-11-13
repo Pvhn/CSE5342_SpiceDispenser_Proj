@@ -181,14 +181,13 @@ void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
  */
 void SetMotorSpd(uint32_t motorID, uint16_t speed)
 {
-    uint32_t load = (uint32_t) (RPMtoLOAD/speed);
     if (speed < MINRPM)
     {
-        MotorData[motorID].period = 0xFFFF;
+        MotorData[motorID].speed = MINRPM;
     }
     else
     {
-        MotorData[motorID].period = load;
+        MotorData[motorID].speed = speed;
     }
 }
 
@@ -231,21 +230,21 @@ void PWM0Gen0_ISR(void)
 {
     static const uint32_t motorID = 0;
     MotorRunStatEnumType status = OFF;
-    static uint32_t speed_count = USTEPRES;
+    static uint32_t accel_steps = 0;
+    static uint32_t deccel_steps = 0;
+    static float deccel_factor = 0;
     static float speed = MINRPM;
-    static bool accel = false;
-    static bool deccel = false;
 
     // Create a local copy for consistency
     uint32_t steps = MotorData[motorID].steps;
-    uint32_t period = MotorData[motorID].period;
+    float max_speed = MotorData[motorID].speed;
     MotorRunStatEnumType status_pv = MotorData[motorID].runstatus;
     uint32_t load = 0;
 
     if (status_pv != RUNNING)
     {
-        speed_count = USTEPRES;
-        accel = true;
+        accel_steps = steps / 2;
+        deccel_steps = steps / 2;
         speed = MINRPM;
         load = (uint32_t) (RPMtoLOAD/speed);
         PWM0_0_LOAD_R = load;
@@ -255,32 +254,32 @@ void PWM0Gen0_ISR(void)
     // Check if motor has moved the needed amount of steps.
     if (steps > 0)
     {
-        if(accel == true)
+        if(accel_steps > 0)
         {
-            if (speed_count > 0)
+            speed = speed + 0.03125;
+            if (speed > max_speed)
             {
-                speed_count--;
+                speed = max_speed;
             }
-            else
+            accel_steps--;
+
+            deccel_factor = speed / deccel_steps;
+        }
+        else
+        {
+            if (deccel_steps > 0)
             {
-                speed_count = USTEPRES;
-
-                load = (uint32_t) (RPMtoLOAD/speed);
-                speed = speed + 0.5;
-
-                if(load > period)
+                speed = speed - deccel_factor;
+                if (speed < MINRPM)
                 {
-                    PWM0_0_LOAD_R = load;
-                    PWM0_0_CMPA_R = load * 0.5;
-                }
-                else
-                {
-                    accel = false;
-                    PWM0_0_LOAD_R = period;
-                    PWM0_0_CMPA_R = period * 0.5;
+                    speed = MINRPM;
                 }
             }
         }
+
+        load = (uint32_t)(RPMtoLOAD / speed);
+        PWM0_0_LOAD_R = load;
+        PWM0_0_CMPA_R = load * 0.5;
 
         PWM0_ENABLE_R |= 0x01;
         MOTOR0EN = 0;
@@ -312,10 +311,11 @@ void PWM1Gen2_ISR(void)
 
     // Create a local copy for consistency
     uint32_t steps = MotorData[motorID].steps;
-    uint32_t period = MotorData[motorID].period;
+    float speed = MotorData[motorID].speed;
+    uint32_t load = (uint32_t)(RPMtoLOAD / speed);
 
-    PWM1_2_LOAD_R = period;
-    PWM1_2_CMPA_R = period * 0.5;
+    PWM1_2_LOAD_R = load;
+    PWM1_2_CMPA_R = load * 0.5;
 
     // Check if motor has moved the needed amount of steps.
     if (steps > 0)

@@ -81,7 +81,7 @@ typedef struct
 	MotorHomeStatEnumType homestatus;
 	uint32_t steps;
 	float position;
-	uint32_t period;
+	uint32_t speed;
 }MotorDataStructType;
 
 
