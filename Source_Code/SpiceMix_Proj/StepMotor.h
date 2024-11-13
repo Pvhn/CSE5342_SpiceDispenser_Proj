@@ -31,7 +31,7 @@
 #define MINRPM (SYSCLOCK*60)/(65535*USTEPFULL360*2)
 #define RPMtoLOAD (SYSCLOCK*60)/(USTEPFULL360*2)
 
-#define GEARRATIO 3.8
+#define GEARRATIO 3.6666666666667 //(56/15)
 
 // Memory Alias for Motor Outputs and Hall Sensor Input
 //#define RACKMOTOR ((volatile uint32_t *)0x4000503C)		// PORTB0-3
@@ -43,7 +43,7 @@
 #define MOTOR1DIR	(*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 1*4)))
 #define MOTOR1EN	(*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4)))
 
-#define HALLSEN (*((volatile uint32_t *)0x4000700C))		// PORTD0/1
+#define HALLSEN (*((volatile uint32_t *)0x4000500C))		// PORTB0/1
 
 // Mask
 #define HALSEN_MASK 0x03

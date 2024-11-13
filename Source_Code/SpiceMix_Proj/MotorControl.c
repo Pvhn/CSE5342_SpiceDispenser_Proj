@@ -13,7 +13,6 @@
  *========================================================
  */
 uint16_t rack_pos;
-uint16_t speed = 20;
 
 /*========================================================
  * Function Declarations
@@ -155,7 +154,7 @@ void SetRackPos(uint16_t pos)
     int32_t microsteps = (int32_t) (delta/MICROSTEPSF)* GEARRATIO;
 
     // Command the new position
-    CommandMotor(RACK, microsteps, 25);
+    CommandMotor(RACK, microsteps, 30);
 
     while (status != HALTED)
     {
@@ -216,15 +215,9 @@ void SetAugerPos(uint16_t rotations)
  */
 void TestMotors(void)
 {
-    uint16_t pos = 0;
-    uint32_t rotations = 0;
-    uint16_t eng_pos = 45;
-    uint16_t diseng_pos = 145;
 
-    SetRackPos(pos);
-    SetServoPos(eng_pos);
-    SetAugerPos(rotations);
-    SetServoPos(diseng_pos);
+
+
 }
 
 

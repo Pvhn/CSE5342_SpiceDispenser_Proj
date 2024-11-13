@@ -12,6 +12,10 @@
 
 
 uint16_t new_command = false;
+uint16_t pos = 0;
+uint32_t rotations = 0;
+uint16_t eng_pos = 90;
+uint16_t diseng_pos = 180;
 
 int main(void)
 {
@@ -25,7 +29,11 @@ int main(void)
     {
         if (new_command)
         {
-            TestMotors();
+            SetRackPos(pos);
+//            SetServoPos(eng_pos);
+            SetAugerPos(rotations);
+//            SetServoPos(diseng_pos);
+            new_command = 0;
         }
     }
 

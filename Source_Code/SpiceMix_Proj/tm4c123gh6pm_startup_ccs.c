@@ -54,7 +54,7 @@ extern uint32_t __STACK_TOP;
 // External declarations for the interrupt handlers used by the application.
 //
 //*****************************************************************************
-extern void PortDISR(void); // Defined in StepMotor.c
+extern void PortBISR(void); // Defined in StepMotor.c
 
 extern void PWM0Gen0_ISR(void); // Defined in StepMotor.c
 extern void PWM1Gen2_ISR(void); // Defined in StepMotor.c
@@ -87,9 +87,9 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // The PendSV handler
     IntDefaultHandler,                      // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
-    IntDefaultHandler,                      // GPIO Port B
+    PortBISR,                      // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C
-    PortDISR,                               // GPIO Port D
+    IntDefaultHandler,                      // GPIO Port D
     IntDefaultHandler,                      // GPIO Port E
     IntDefaultHandler,                      // UART0 Rx and Tx
     IntDefaultHandler,                      // UART1 Rx and Tx

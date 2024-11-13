@@ -117,38 +117,30 @@ void StepMotorInit(void)
  */
 void HallSensorInit(void)
 {
-    // Enable GPIO PORTD
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;
+    // Enable GPIO PORTB
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1;
     _delay_cycles(3);
 
-    // Initialize PORTD (Hall Sensor Input)
-    GPIO_PORTD_DIR_R &= ~HALSEN_MASK;   // Enable PD0/1 as Inputs
-    GPIO_PORTD_DEN_R |= HALSEN_MASK;    // Set Digital Enable
-    GPIO_PORTD_PUR_R |= HALSEN_MASK;    // Set Internal Pull-Up
+    // Initialize PORTB (Hall Sensor Input)
+    GPIO_PORTB_DIR_R &= ~HALSEN_MASK;   // Enable PB0/1 as Inputs
+    GPIO_PORTB_DEN_R |= HALSEN_MASK;    // Set Digital Enable
+    GPIO_PORTB_PUR_R |= HALSEN_MASK;    // Set Internal Pull-Up
 
     // Configuring GPIO Interrupts
-    GPIO_PORTD_IM_R &= ~HALSEN_MASK;    // Mask out interrupts to prevent false trip during config
-    GPIO_PORTD_IS_R &= ~HALSEN_MASK;    // Set for interrupt on edge detect
-    GPIO_PORTD_IBE_R |= HALSEN_MASK;   // Interrupt on both edges
-    GPIO_PORTD_ICR_R |= HALSEN_MASK;    // Clear any pending Interrupts
-    GPIO_PORTD_IM_R |= HALSEN_MASK;     // Turn on Interrupts
-    NVIC_EN0_R |= 1 << (INT_GPIOD - 16);    // Enable interrupts for Port D
+    GPIO_PORTB_IM_R &= ~HALSEN_MASK;    // Mask out interrupts to prevent false trip during config
+    GPIO_PORTB_IS_R &= ~HALSEN_MASK;    // Set for interrupt on edge detect
+    GPIO_PORTB_IBE_R |= HALSEN_MASK;   // Interrupt on both edges
+    GPIO_PORTB_ICR_R |= HALSEN_MASK;    // Clear any pending Interrupts
+    GPIO_PORTB_IM_R |= HALSEN_MASK;     // Turn on Interrupts
+    NVIC_EN0_R |= 1 << (INT_GPIOB - 16);    // Enable interrupts for Port D
 }
 
 void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
 {
     uint32_t dir = CW;
     int32_t sign = 1;
-    uint32_t load = (uint32_t) (RPMtoLOAD/speed);
 
-    if (speed < MINRPM)
-    {
-        MotorData[motorID].period = 0xFFFF;
-    }
-    else
-    {
-        MotorData[motorID].period = load;
-    }
+    SetMotorSpd(motorID, speed);
 
     if (microsteps < 0)
     {
@@ -189,14 +181,13 @@ void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
  */
 void SetMotorSpd(uint32_t motorID, uint16_t speed)
 {
-    uint32_t load = (uint32_t) RPMtoLOAD*speed;
+    uint32_t load = (uint32_t) (RPMtoLOAD/speed);
     if (speed < MINRPM)
     {
         MotorData[motorID].period = 0xFFFF;
     }
     else
     {
-
         MotorData[motorID].period = load;
     }
 }
@@ -240,17 +231,57 @@ void PWM0Gen0_ISR(void)
 {
     static const uint32_t motorID = 0;
     MotorRunStatEnumType status = OFF;
+    static uint32_t speed_count = USTEPRES;
+    static float speed = MINRPM;
+    static bool accel = false;
+    static bool deccel = false;
 
     // Create a local copy for consistency
     uint32_t steps = MotorData[motorID].steps;
     uint32_t period = MotorData[motorID].period;
+    MotorRunStatEnumType status_pv = MotorData[motorID].runstatus;
+    uint32_t load = 0;
 
-    PWM0_0_LOAD_R = period;
-    PWM0_0_CMPA_R = period * 0.5;
+    if (status_pv != RUNNING)
+    {
+        speed_count = USTEPRES;
+        accel = true;
+        speed = MINRPM;
+        load = (uint32_t) (RPMtoLOAD/speed);
+        PWM0_0_LOAD_R = load;
+        PWM0_0_CMPA_R = load * 0.5;
+    }
 
     // Check if motor has moved the needed amount of steps.
     if (steps > 0)
     {
+        if(accel == true)
+        {
+            if (speed_count > 0)
+            {
+                speed_count--;
+            }
+            else
+            {
+                speed_count = USTEPRES;
+
+                load = (uint32_t) (RPMtoLOAD/speed);
+                speed = speed + 0.5;
+
+                if(load > period)
+                {
+                    PWM0_0_LOAD_R = load;
+                    PWM0_0_CMPA_R = load * 0.5;
+                }
+                else
+                {
+                    accel = false;
+                    PWM0_0_LOAD_R = period;
+                    PWM0_0_CMPA_R = period * 0.5;
+                }
+            }
+        }
+
         PWM0_ENABLE_R |= 0x01;
         MOTOR0EN = 0;
         status = RUNNING;
@@ -312,7 +343,7 @@ void PWM1Gen2_ISR(void)
     PWM1_2_ISC_R |= 0x02;
 }
 
-void PortDISR(void)
+void PortBISR(void)
 {
     uint16_t input = HALLSEN;
     MotorHomeStatEnumType homestatus = NOTHOME;
@@ -335,6 +366,6 @@ void PortDISR(void)
 
     MotorData[0].homestatus = homestatus;
 
-    GPIO_PORTD_ICR_R |= HALSEN_MASK;
+    GPIO_PORTB_ICR_R |= HALSEN_MASK;
 }
 
