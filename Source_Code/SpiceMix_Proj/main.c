@@ -9,6 +9,8 @@
 #include "StepMotor.h"
 #include "Servo.h"
 #include "MotorControl.h"
+#include "eepromControl.h"
+#include "eeprom.h"
 
 
 uint16_t new_command = false;
@@ -19,10 +21,14 @@ uint16_t diseng_pos = 180;
 
 int main(void)
 {
+
+
     System_Init();
     StepMotorInit();
     ServoInit();
     HallSensorInit();
+	initEeprom();
+    initSpiceData();
 
 //    StepRackHome();
     while(1)
@@ -36,5 +42,6 @@ int main(void)
             new_command = 0;
         }
     }
+
 
 }
