@@ -78,10 +78,12 @@ uint16_t StepRackHome(void)
 
         if (home_status == HOME)
         {
+
+            waitMicrosecond(100000);  // Wait atleast 1ms to allow motor to start running
+            CommandMotor(RACK, -550, 10);
+            //TurnOffMotor(RACK);
             // Reset Rack position to 0 (Home);
             rack_pos = 0;
-            CommandMotor(RACK, 0, 10);
-            //TurnOffMotor(RACK);
         }
         else
         {
