@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 #define MAX_CHARS 80
-#define MAX_FIELDS 5
+#define MAX_FIELDS 21
 #define NUM_REFERENCE 5
 
 typedef struct _USER_DATA

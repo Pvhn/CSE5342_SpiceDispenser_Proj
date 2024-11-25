@@ -28,14 +28,15 @@ uint16_t diseng_pos = 180;
 char *commands[] = {"spice", "recipe", "check", "save"};
 uint8_t min_fields[4] = {3, 2, 2, 2};
 
-uint8_t SpiceList[MAXSLOTS];
+char *SpiceList[MAXSLOTS];
+char *RecipeList[MAXSLOTS];
 
 uint8_t nameSearch(char *name, char *arr[])
 {
     int i = 0;
     for(i = 0; i < MAXSLOTS; i++)
     {
-        if(strcmp(name, SpiceList[i]) == 0)
+        if(strcmp(name, arr[i]) == 0)
         {
             return i;
         }
@@ -46,36 +47,77 @@ void dispenseSpice(USER_DATA *data)
 {
     //spice <name> <amount>
     uint8_t position = 0;
-    bool valid = true;
-    uint8_t spiceName = (uint8_t) data->buffer[data->fieldPosition[1]];
-    position = nameSearch(spiceName, SpiceList);
+    char spiceName = data->buffer[data->fieldPosition[1]];
+    position = nameSearch(&spiceName, SpiceList);
+    if(position == 255)
+    {
+        putsUart0("dispenseSpice failed to find spice\n");
+        return;
+    }
     SetRackPos(position);
-    SetAugerPos((uint16_t) getFieldInteger(data, 2)); // Potentially dangerous
+    SetAugerPos((uint16_t) getFieldInteger(data, 2));
+    putsUart0("Command completed\n");
 }
 
-void dispenseRecipe(USER_DATA *data)
+void dispenseRecipe(USER_DATA *data, char *RecipeList[])
 {
     //recipe <name>
+    uint8_t i = 0;
     uint8_t position = 0;
-    bool valid = true;
-    uint8_t RecipeName = (uint8_t) data->buffer[data->fieldPosition[1]];
-    position = nameSearch(RecipeName, SpiceList);
+    char *RecipeName = &(data->buffer[data->fieldPosition[1]]);
+    position = nameSearch(RecipeName, RecipeList);
+    if(position == 255)
+    {
+        putsUart0("dispenseRecipe failed to find recipe\n");
+        return;
+    }
     RecipeStructType target = Read_Recipe(position);
-    //loop through each possible spice location and go to it, dispensing the amount
-    //required. Needs to check for empty fields somehow.
-    //uint8_t pos = test->DataBits->position; <- example of getting position
-    //SetRackPos(position);
-    //SetAugerPos((uint16_t) getFieldInteger(data, 2)); // Potentially dangerous
+    for(i = 0; i < MAXSLOTS; i++)
+    {
+        if(target.Data[i].DataBits.quantity == 0)
+            break;
+
+        SetRackPos(target.Data[i].DataBits.position);
+        SetAugerPos(target.Data[i].DataBits.quantity);
+    }
+    putsUart0("Command completed\n");
 }
 
 void printRecipe(USER_DATA *data)
 {
-
+    //check <name>
+    uint8_t i = 0;
+    uint8_t position = 0;
+    char str[20];
+    char *RecipeName = &(data->buffer[data->fieldPosition[1]]);
+    position = nameSearch(RecipeName, RecipeList);
+    if(position == 255)
+    {
+        putsUart0("printRecipe failed to find recipe\n");
+        return;
+    }
+    sprintf(str, "%s found; it includes:\n", RecipeName);
+    putsUart0(str);
+    RecipeStructType target = Read_Recipe(position);
+    for(i = 0; i < MAXSLOTS; i++)
+    {
+        sprintf(str, "- %d teaspoons of %s \n", target.Data[i].DataBits.quantity, SpiceList[target.Data[i].DataBits.position]);
+        putsUart0(str);
+    }
+    putsUart0("Command completed\n");
 }
 
 void writeRecipe(USER_DATA *data)
 {
-
+    RecipeStructType new; // Can't figure out
+    uint8_t i = 0;
+    strcpy(new.Name, getFieldString(data, 1));
+    for(i = 2; i < data->fieldCount / 2; i++)
+    {
+        new.Data[i].DataBits.position = nameSearch(getFieldString(data, i*2), RecipeList);
+        new.Data[i].DataBits.quantity = getFieldInteger(data, i*2);
+    }
+    Write_Recipe(new);
 }
 
 void initSpiceList()
@@ -83,26 +125,22 @@ void initSpiceList()
     int i = 0;
     for(i = 0; i < MAXSLOTS; i++)
     {
-        SpiceList[i] = Read_SpiceName(i);
+        SpiceList[i] = (char*) Read_SpiceName(i);
     }
 }
 
-void initRecipeList(uint8_t *RecipeList[])
+void initRecipeList(char *RecipeList[])
 {
     int i = 0;
-    uint16_t count = Read_NumofRecipes;
-    uint16_t buffer[count];
+    uint16_t count = Read_NumofRecipes();
     for(i = 0; i < count; i++)
     {
-        buffer[i] = Read_Recipe(i).Name;
+        RecipeList[i] = (char*) Read_Recipe(i).Name;
     }
-    RecipeList = buffer;
 }
 
 int main(void)
 {
-    uint8_t *RecipeList[] = {};
-
     System_Init();
     StepMotorInit();
     ServoInit();
@@ -133,7 +171,7 @@ int main(void)
                     dispenseSpice(&data);
                     break;
                 case 1:
-                    dispenseRecipe(&data);
+                    dispenseRecipe(&data, &RecipeList);
                     break;
                 case 2:
                     printRecipe(&data);
