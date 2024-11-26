@@ -28,7 +28,7 @@ uint16_t diseng_pos = 180;
 char *commands[] = {"spice", "recipe", "check", "save"};
 uint8_t min_fields[4] = {3, 2, 2, 2};
 
-char *SpiceList[MAXSLOTS];
+char SpiceList[MAXSLOTS][MAXNAMESIZE];
 char *RecipeList[MAXSLOTS];
 
 uint8_t nameSearch(char *name, char *arr[])
@@ -43,6 +43,7 @@ uint8_t nameSearch(char *name, char *arr[])
     }
     return 255;
 }
+
 void dispenseSpice(USER_DATA *data)
 {
     //spice <name> <amount>
@@ -123,9 +124,12 @@ void writeRecipe(USER_DATA *data)
 void initSpiceList()
 {
     int i = 0;
+    char *temp;
     for(i = 0; i < MAXSLOTS; i++)
     {
-        SpiceList[i] = (char*) Read_SpiceName(i);
+        temp  = (char*) Read_SpiceName(i);
+
+        strcpy(SpiceList[i], temp);
     }
 }
 
@@ -139,6 +143,22 @@ void initRecipeList(char *RecipeList[])
     }
 }
 
+void displaySpicePage(void)
+{
+    uint8_t i = 0;
+    char str[20];
+
+    putsUart0("Type in the Name and Quantity you would like to dispense (Name, Qty).\n");
+    putsUart0("You may also type Return to return to do something else");
+
+    for (i = 0; i < MAXSLOTS; i++)
+    {
+        sprintf(str, "%d: %s \n", i, SpiceList[i]);
+        putsUart0(SpiceList[i]);
+        putsUart0("\n");
+    }
+}
+
 int main(void)
 {
     System_Init();
@@ -149,12 +169,15 @@ int main(void)
     initSpiceData();
     initSpiceList();
     initRecipeList(&RecipeList);
+
     initUart0(); // If something breaks, put the needed pin assignments in System_Init()
     USER_DATA data;
     int8_t code = -1;
+
     // Setup UART0 baud rate
     setUart0BaudRate(115200, 40e6);
     putsUart0("UART Test\n");
+
     while(true)
     {
         clearBuffer(&data);
@@ -179,22 +202,9 @@ int main(void)
                 case 3:
                     writeRecipe(&data);
                     break;
+                default:
+                    break;
             }
         }
     }
-/*
-//    StepRackHome();
-    while(1)
-    {
-        if (new_command)
-        {
-            SetRackPos(pos);
-//            SetServoPos(eng_pos);
-            SetAugerPos(rotations);
-//            SetServoPos(diseng_pos);
-            new_command = 0;
-        }
-    }
-*/
-
 }
