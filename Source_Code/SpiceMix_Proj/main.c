@@ -17,7 +17,7 @@ uint16_t new_command = false;
 uint16_t pos = 0;
 uint32_t rotations = 0;
 uint16_t eng_pos = 120;
-uint16_t diseng_pos = 180;
+uint16_t diseng_pos = 170;
 uint16_t home = 0;
 
 int main(void)

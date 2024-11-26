@@ -254,7 +254,7 @@ void PWM0Gen0_ISR(void)
     // Check if motor has moved the needed amount of steps.
     if (steps > 0)
     {
-        if(accel_steps > 0)
+        if(accel_steps > 0 && steps > 600)
         {
             speed = speed + 0.03125;
             if (speed > max_speed)
