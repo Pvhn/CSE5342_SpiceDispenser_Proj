@@ -263,8 +263,6 @@ uint8_t* Read_SpiceName(uint8_t position)
 	return Read_NameEEProm(offset);
 }
 
-
-
 /*=======================================================
  * Function Name: Write_NameEEProm
  *=======================================================

@@ -14,7 +14,7 @@
  *========================================================
  */
 uint16_t rack_pos;
-uint16_t SVO_ENG_POS = 140;
+uint16_t SVO_ENG_POS = 100;
 uint16_t SVO_DIS_POS = 170;
 
 
@@ -226,6 +226,19 @@ void TestMotors(void)
 
 }
 
+/* =======================================================
+ * Function Name: DispenseSequence
+ * =======================================================
+ * Parameters: position, quantity
+ * Return: None
+ * Description: This function will execute the dispense
+ * sequence for the spice rack. This includes calls
+ * to for setting the rack position, engaging/disengaging
+ * the servo clutch, and turning the auger motor.
+ * position is a specified slot on the rack. quantity
+ * is the amount of half teaspoons.
+ * =======================================================
+ */
 void DispenseSequence(uint8_t position, uint16_t quantity)
 {
     SetRackPos(position);
