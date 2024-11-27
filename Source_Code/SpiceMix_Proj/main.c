@@ -24,19 +24,33 @@
 char *commands[] = {"spice", "recipe", "check", "save", "home"};
 uint8_t min_fields[NUMOFCMDS] = {3, 2, 2, 2, 1};
 
+char *rusty_itoa(uint16_t num)
+{
+    uint8_t i = 0;
+    char *buffer[6] = {'0', 0, 0, 0, 0, 0};
+    if(num == 0)
+        return buffer;
+    while(num != 0)
+    {
+        buffer[i] = num % 10 + 48;
+        num = num / 10;
+        i++;
+    }
+    return buffer;
+}
 // NOT WORKING. NEED TO DEBUG SPRINTF MEMORY CORRUPTION
 void displaySpicePage(void)
 {
     uint8_t i = 0;
     char str[MAX_CHARS];
     putsUart0("Type in the Name and Quantity you would like to dispense (Name, Qty).\n");
-    putsUart0("You may also type Return to return to do something else");
+    putsUart0("You may also type Return to return to do something else.\n");
 
     for (i = 0; i < MAXSLOTS; i++)
     {
-//        sprintf(str, "Hello %d", i);
-//        putsUart0(str);
-//        sprintf(str, " %d: %s\n",i, SpiceList[i]);
+        strcpy(str, rusty_itoa(i));
+        putsUart0(str);
+        putsUart0(": ");
         putsUart0(SpiceList[i]);
         putsUart0("\n");
     }
@@ -96,7 +110,9 @@ int main(void)
                 {
                     putsUart0(commands[i]);
                     putsUart0("\n");
-                }           
+                }
+                putsUart0("Testing below:\n");
+                displaySpicePage();
                 break;
         }
     }
