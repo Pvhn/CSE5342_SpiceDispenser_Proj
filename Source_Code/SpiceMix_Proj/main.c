@@ -22,8 +22,9 @@
 uint16_t new_command = false;
 uint16_t pos = 0;
 uint32_t rotations = 0;
-uint16_t eng_pos = 90;
-uint16_t diseng_pos = 180;
+uint16_t eng_pos = 120;
+uint16_t diseng_pos = 170;
+uint16_t home = 0;
 
 char *commands[] = {"spice", "recipe", "check", "save"};
 uint8_t min_fields[4] = {3, 2, 2, 2};
@@ -204,6 +205,13 @@ int main(void)
                     break;
                 default:
                     break;
+            }
+        }
+        else
+        {
+            if(home)
+            {
+                StepRackHome();
             }
         }
     }

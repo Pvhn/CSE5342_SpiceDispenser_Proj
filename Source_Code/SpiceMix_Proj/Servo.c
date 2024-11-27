@@ -30,11 +30,17 @@ void ServoInit(void)
     _delay_cycles(3);
 
     // Initialize PORTD
-    GPIO_PORTD_DIR_R |= 0x04;       // Enable PD4 as Output
+    GPIO_PORTD_DIR_R |= 0x04;       // Enable PD2 as Output
     GPIO_PORTD_DEN_R |= 0x04;       // Set Digital Enable
-    GPIO_PORTD_AFSEL_R |= 0x04;     // Set Alternate Function for PD4
-    GPIO_PORTD_PCTL_R &= ~0x0F00;   // Clear function control for PD4
-    GPIO_PORTD_PCTL_R |= 0x0700;    // Set PD4 for Wide-Timer 3 Output
+    GPIO_PORTD_AFSEL_R |= 0x04;     // Set Alternate Function for PD2
+    GPIO_PORTD_PCTL_R &= ~0x0F00;   // Clear function control for PD2
+    GPIO_PORTD_PCTL_R |= 0x0700;    // Set PD2 for Wide-Timer 3 Output
+
+    GPIO_PORTD_DIR_R |= 0x08;       // Enable PD3 as Output
+    GPIO_PORTD_DEN_R |= 0x08;       // Set Digital Enable
+    GPIO_PORTD_AFSEL_R |= 0x08;     // Set Alternate Function for PD3
+    GPIO_PORTD_PCTL_R &= ~0xF000;   // Clear function control for PD3
+    GPIO_PORTD_PCTL_R |= 0x7000;    // Set PD4 for Wide-Timer 3 Output
 
     // Initialize Wide-Timer 3
     WTIMER3_CTL_R &= ~TIMER_CTL_TAEN;   // Disable Timer for Config
@@ -43,6 +49,13 @@ void ServoInit(void)
     WTIMER3_TAILR_R = SYSCLOCK/ 50;      // Set Timer Frequency to 50Hz (ClockFreq/DesiredFreq)
     WTIMER3_TAV_R = 0;                  // Set Initial Value to 0
     WTIMER3_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TAPWML; // Enable the timer and invert PWM output
+
+    WTIMER3_CTL_R &= ~TIMER_CTL_TBEN;   // Disable Timer for Config
+    WTIMER3_CFG_R = 0x04;               // Configure Wide-Timer as 32-Bit
+    WTIMER3_TBMR_R = TIMER_TBMR_TBAMS | TIMER_TBMR_TBMR_PERIOD; // Configure Periodic PWM Timer Mode
+    WTIMER3_TBILR_R = SYSCLOCK/ 50;      // Set Timer Frequency to 50Hz (ClockFreq/DesiredFreq)
+    WTIMER3_TBV_R = 0;                  // Set Initial Value to 0
+    WTIMER3_CTL_R |= TIMER_CTL_TBEN | TIMER_CTL_TBPWML; // Enable the timer and invert PWM output
 
     SetServoPos(180);
 }
@@ -71,6 +84,7 @@ void SetServoPos(uint16_t angle)
 
     // Set desired duty cycle to Wide Timer 3 Match Register
     WTIMER3_TAMATCHR_R = duty;
+    WTIMER3_TBMATCHR_R = duty;
 
     waitMicrosecond(1000000);
 }
