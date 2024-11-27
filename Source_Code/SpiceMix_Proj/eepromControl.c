@@ -20,25 +20,22 @@
 // Default Spices
 SpiceStructType DefaultSpices[MAXSLOTS] =
 {
-	{"SALT", 0x00},
-	{"BLACKPEPPER", 0xCD01},
-	{"GARLIC", 0xEF02},
-	{"PAPRIKA", 0x1203},
-	{"ONION", 0x2304},
-	{"OREGANO", 0x4505},
-	{"THYME", 0x6706},
-	{"ROSEMARY", 0x8907},
+	{"SALT", 0x300},
+	{"BLACKPEPPER", 0x301},
+	{"GARLIC", 0x302},
+	{"PAPRIKA", 0x303},
+	{"ONION", 0x304},
+	{"OREGANO", 0x305},
+	{"THYME", 0x306},
+	{"ROSEMARY", 0x307},
 };
 
 // Recipes for testing EEPROM
-RecipeStructType test_recipes[8] =
+RecipeStructType test_recipes[3] =
 {
-	{"Cajun", {0xABC0, 0xDEF5}},
-	{"Pizza", {0x1234, 0x5677, 0x89A2, 0x0021}},
-	{"5Spice", {0xBCD3, 0xFED2, 0x7654}},
-	{"BBQ", {0xDEAD, 0xBEEF, 0xFACE, 0xCAFE, 0xFEED, 0xBADE, 0xBABE, 0xDADE}},
-	{"Italian", {0xFEDC, 0xAAAA, 0xBBBB,0xDDDD, 0xEEEE}},
-	{"Medditeranean", {0x5432, 0x9876, 0x5678}},
+	{"CAJUN", {0x41, 0x12}},
+	{"ITALIAN", {0x63, 0x24, 0x55, 0x16}},
+	{"5SPICE", {0x27, 0x10, 0x42}}
 };
 
 /*========================================================
@@ -93,6 +90,22 @@ uint8_t* Read_NameEEProm(uint16_t offset)
 	}
 
 	return name;
+}
+
+uint8_t* Read_RecipeName(uint8_t number)
+{
+    uint16_t offset = 0;
+    uint8_t num_of_stored_rec = Read_NumofRecipes();
+    offset = (number * RECBLKSIZE) + RECBLKADDR;
+
+    // Validate the provided position
+    if (number > num_of_stored_rec)
+    {
+        return (uint8_t *) ERRORINVALID;
+    }
+
+    // Return pointer to the string
+    return Read_NameEEProm(offset);
 }
 
 /*=======================================================
@@ -249,6 +262,8 @@ uint8_t* Read_SpiceName(uint8_t position)
 	// Return pointer to the string
 	return Read_NameEEProm(offset);
 }
+
+
 
 /*=======================================================
  * Function Name: Write_NameEEProm
@@ -548,9 +563,9 @@ uint16_t initSpiceData(void)
 	// Read the First PowerUp Flag
 	FirstPowerUp.FullWord = readEeprom(SPICEINITOFST);
 
-	// If the FirstPowerUp flag indicates first time (0)
+	// If the FirstPowerUp flag doesn't match key
 	// initialize the EEPROM Spice Blocks using the defaults
-	if (FirstPowerUp.FullWord == 0xFFFFFFFF)
+	if (FirstPowerUp.FullWord != 0xBEEF)
 	{
 		// Write Init Key value for next power up state.
 		error = writeEeprom(SPICEINITOFST, 0xBEEF);
@@ -605,18 +620,14 @@ uint16_t initSpiceData(void)
 void TestEEPROM(void)
 {
 	int x = 0;
-	uint16_t data;
-	uint8_t* name;
-	uint16_t remrec = 0;
 	RecipeStructType recipe;
 	uint16_t error = 0;
 
-	for (x = 0; x < MAXSLOTS; x++)
-	{
-		data = Read_SpiceRemQty(x);
-		name = Read_SpiceName(x);
-		remrec = Read_NumofRecipes();
+	// Initialize number of recipes to 0.
+	error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
 
+	for (x = 0; x < 3; x++)
+	{
 		error = Write_Recipe(test_recipes[x]);
 		recipe = Read_Recipe(x);
 	}

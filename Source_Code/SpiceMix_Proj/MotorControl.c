@@ -7,12 +7,16 @@
  */
 
 #include "MotorControl.h"
+#include "Servo.h"
 
 /*========================================================
  * Variable Definitions
  *========================================================
  */
 uint16_t rack_pos;
+uint16_t SVO_ENG_POS = 140;
+uint16_t SVO_DIS_POS = 170;
+
 
 /*========================================================
  * Function Declarations
@@ -220,6 +224,14 @@ void TestMotors(void)
 
 
 
+}
+
+void DispenseSequence(uint8_t position, uint16_t quantity)
+{
+    SetRackPos(position);
+    SetServoPos(SVO_ENG_POS);
+    SetAugerPos(quantity);
+    SetServoPos(SVO_DIS_POS);
 }
 
 

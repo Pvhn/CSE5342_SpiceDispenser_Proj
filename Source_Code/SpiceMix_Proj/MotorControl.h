@@ -44,7 +44,7 @@ typedef enum
 extern uint16_t StepRackHome(void);
 extern void SetRackPos(uint16_t angle);
 extern void SetAugerPos(uint16_t rotations);
-
+extern void DispenseSequence(uint8_t position, uint16_t quantity);
 extern void TestMotors(void);
 
 #endif /* STEPPER_H_ */

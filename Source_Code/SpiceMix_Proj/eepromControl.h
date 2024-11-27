@@ -86,6 +86,7 @@ extern RecipeStructType Read_Recipe(uint8_t number);
 extern uint16_t Read_NumofRecipes(void);
 extern uint16_t Read_SpiceRemQty(uint8_t position);
 extern uint8_t *Read_SpiceName(uint8_t position);
+extern uint8_t *Read_RecipeName(uint8_t position);
 
 // Write functions return an error code
 extern uint16_t initSpiceData(void);
