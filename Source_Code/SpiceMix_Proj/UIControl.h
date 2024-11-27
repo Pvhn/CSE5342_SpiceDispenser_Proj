@@ -28,7 +28,13 @@
 * Variable Declarations
 *========================================================
 */
+
+// Spice Dictionary (Initialized with EEPROM valuues on start-up)
+// See initSpiceList()
 extern char SpiceList[MAXSLOTS][MAXNAMESIZE];
+
+// Recipe Dictionary (Initialized with EEPROM valuues on start-up)
+// See initRecipeList()
 extern char RecipeList[MAXNUMRECP][MAXNAMESIZE];
 
 /*========================================================
@@ -103,8 +109,58 @@ extern void dispenseRecipe(USER_DATA* data);
  *=======================================================
  */
 extern void printRecipe(USER_DATA* data);
+
+/*====================================================================
+ * Function Name: saveRecipe
+/*====================================================================
+ * Parameters: data
+ * Return: None
+ * Description:
+ * Function will save/update a given recipe. The function first checks
+ * that the given recipe exists. If it does, the user is prompted to
+ * either continue writing to the recipe (aka update the recipe) or
+ * cancel by entering "cancel". If the recipe does not currently exists 
+ * or the user chooses to continue the function will enter a while loop
+ * to prompt the user to enter spice data for the recipe. This will
+ * continue to prompt the user for entries until either the user
+ * enters "done" or the max amount of spice slots is entered. The user
+ * may also enter "cancel" to abort the process entirely. With each
+ * spice entry, the entry is checked that it exists in the known spice list
+ * and that a valid quantity was provided. If the user enters a spice
+ * twice, the most recent entry will take precedence. Once all entries
+ * have been entered the recipe is saved (or updated) in the EEPROM.
+ * In the event there is an issue writing to the EEPROM, the user is
+ * notified.
+/*====================================================================
+ */
 extern void saveRecipe(USER_DATA* data);
+
+/*====================================================================
+ * Function Name: sinitSpiceList(void)
+/*====================================================================
+ * Parameters: None
+ * Return: None
+ * Description:
+ * Function will read the EEPROM and initialize the user-interface
+ * spice list dictionary. The SpiceList dictionary is used for displaying
+ * the stored spices to the user as well as for searching and validating
+ * recipe data.
+/*====================================================================
+ */
 extern void initSpiceList(void);
+
+/*====================================================================
+ * Function Name: sinitSpiceList(void)
+/*====================================================================
+ * Parameters: None
+ * Return: None
+ * Description:
+ * Function will read the EEPROM and initialize the user-interface
+ * recipe list dictionary. This RecipeList dictionary is used for displaying
+ * the stored recipes to the user as well as for validating and updating
+ * existsing recipes.
+/*====================================================================
+ */
 extern void initRecipeList(void);
 
 

@@ -20,8 +20,9 @@
 #include "parsing.h"
 #include "UIControl.h"
 
+#define NUMOFCMDS 5
 char *commands[] = {"spice", "recipe", "check", "save", "home"};
-uint8_t min_fields[5] = {3, 2, 2, 2, 1};
+uint8_t min_fields[NUMOFCMDS] = {3, 2, 2, 2, 1};
 
 // NOT WORKING. NEED TO DEBUG SPRINTF MEMORY CORRUPTION
 void displaySpicePage(void)
@@ -61,12 +62,14 @@ int main(void)
 
     USER_DATA data;
     int8_t code = -1;
+    uint8_t i = 0;
 
     putsUart0("UART Test\n");
 
-    StepRackHome();
+    //StepRackHome();
     while(true)
     {
+        putsUart0("Enter a command: ");
         clearBuffer(&data);
         getsUart0(&data);
         putsUart0("\n");
@@ -87,7 +90,13 @@ int main(void)
                 saveRecipe(&data);
                 break;
             default:
-                putsUart0("Error: command not recognized\n");
+                putsUart0("====================== ERROR ======================\n");
+                putsUart0("Command not recognized. Valid commands are:\n");
+                for (i = 0; i < NUMOFCMDS; i++)
+                {
+                    putsUart0(commands[i]);
+                    putsUart0("\n");
+                }           
                 break;
         }
     }
