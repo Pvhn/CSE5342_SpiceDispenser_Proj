@@ -42,6 +42,8 @@ extern char RecipeList[MAXNUMRECP][MAXNAMESIZE];
 *========================================================
 */
 
+char* rusty_itoa(uint16_t num);
+
 /*=======================================================
  * Function Name: getUserInput
  *=======================================================
@@ -112,7 +114,7 @@ extern void printRecipe(USER_DATA* data);
 
 /*====================================================================
  * Function Name: saveRecipe
-/*====================================================================
+ *====================================================================
  * Parameters: data
  * Return: None
  * Description:
@@ -131,13 +133,13 @@ extern void printRecipe(USER_DATA* data);
  * have been entered the recipe is saved (or updated) in the EEPROM.
  * In the event there is an issue writing to the EEPROM, the user is
  * notified.
-/*====================================================================
+ *====================================================================
  */
 extern void saveRecipe(USER_DATA* data);
 
 /*====================================================================
- * Function Name: sinitSpiceList(void)
-/*====================================================================
+ * Function Name: initSpiceList
+ *====================================================================
  * Parameters: None
  * Return: None
  * Description:
@@ -145,13 +147,13 @@ extern void saveRecipe(USER_DATA* data);
  * spice list dictionary. The SpiceList dictionary is used for displaying
  * the stored spices to the user as well as for searching and validating
  * recipe data.
-/*====================================================================
+ *====================================================================
  */
 extern void initSpiceList(void);
 
 /*====================================================================
- * Function Name: sinitSpiceList(void)
-/*====================================================================
+ * Function Name: initRecipeList
+ *====================================================================
  * Parameters: None
  * Return: None
  * Description:
@@ -159,9 +161,17 @@ extern void initSpiceList(void);
  * recipe list dictionary. This RecipeList dictionary is used for displaying
  * the stored recipes to the user as well as for validating and updating
  * existsing recipes.
-/*====================================================================
+ *====================================================================
  */
 extern void initRecipeList(void);
 
+extern void UIRackHome(void);
+
+
+extern void refillSpice(USER_DATA* data);
+
+extern void changeSpice(USER_DATA* data);
+
+extern void deleteRecipe(USER_DATA* data);
 
 #endif /* UICONTROL_H_ */

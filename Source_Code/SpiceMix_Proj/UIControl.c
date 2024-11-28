@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "string.h"
 #include "uart0.h"
+#include <ctype.h>
 
  /*========================================================
   * Variable Definitions
@@ -48,6 +49,59 @@ char RecipeList[MAXNUMRECP][MAXNAMESIZE];
  */
  // Forward Declaration
 extern uint8_t nameSearch(char* name, char arr[][MAXNAMESIZE], int size);
+extern bool isDigitString(char* string);
+
+char* rusty_itoa(uint16_t num)
+{
+    uint8_t i = 0;
+    uint8_t start = 0;
+    uint8_t end = 5;
+    // Static to ensure the pointer is properly returned to caller
+    char buffer[6] = { '0', 0, 0, 0, 0, 0 };
+
+    if (num == 0)
+    {
+        buffer[0] = '0';
+        buffer[1] = 0;
+        return buffer;
+    }
+    while (num != 0 && i < 5)
+    {
+        buffer[i] = num % 10 + 48;
+        num = num / 10;
+        i++;
+    }
+
+    end = i - 1;
+
+    // Reverse the string since the conversion works in reverse
+    while (start < end)
+    {
+        char temp = buffer[start];
+        buffer[start] = buffer[end];
+        buffer[end] = temp;
+        end--;
+        start++;
+    }
+    return buffer;
+}
+
+bool isDigitString(char* string)
+{
+    uint8_t length = strlen(string);
+    uint8_t i = 0;
+
+    while (i < length && *(string+i) != '\0')
+    {
+        if (!isdigit(*(string + i)))
+        {
+            return false;
+        }
+        i++;
+    }
+
+    return true;
+}
 
 uint8_t nameSearch(char* name, char arr[][MAXNAMESIZE], int size)
 {
@@ -99,7 +153,6 @@ void dispenseSpice(USER_DATA* data)
         Write_SpiceRemQty(position, rem_amount - req_amount);
         DispenseSequence(position, req_amount);
     }
-
 
     putsUart0("Command completed\n");
 }
@@ -355,4 +408,207 @@ void initRecipeList(void)
     {
         strcpy(RecipeList[i], (char*)Read_Recipe(i).Name);
     }
+}
+
+void refillSpice(USER_DATA* data)
+{
+    uint8_t position = ERRORMATCH;
+    uint16_t req_amount = (uint16_t)getFieldInteger(data, 2);
+
+    position = nameSearch(getFieldString(data, 1), SpiceList, MAXSLOTS);
+
+    if (position == ERRORMATCH)
+    {
+        putsUart0("Failed to find the spice. Aborting command.\n");
+        return;
+    }
+
+    if (req_amount > MAXQTY)
+    {
+        putsUart0("====================== NOTICE ======================\n");
+        putsUart0("The entered amount is greater than the max allowed quantity\n");
+        putsUart0("Assuming slot is filled to max capacity\n");
+    }
+
+    Write_SpiceRemQty(position, req_amount);
+    putsUart0("Command completed\n");
+}
+
+void changeSpice(USER_DATA* data)
+{
+    uint8_t position = ERRORMATCH;
+    uint16_t req_amount = (uint16_t)getFieldInteger(data, 2);
+    char str[MAX_CHARS];
+    bool cancel = false;
+    uint8_t step = 0;
+
+    while (!cancel)
+    {
+        switch (step)
+        {
+        case 0:
+        {
+            putsUart0("Please Enter a slot number (0-");
+            strcpy(str, rusty_itoa(MAXSLOTS - 1));
+            putsUart0(str);
+            putsUart0(") to change (or cancel to return): ");
+            getUserInput(data);
+
+            if (strcmp(getFieldString(data, 0), "cancel") == 0)
+            {
+                putsUart0("Cancelling...");
+                putsUart0("Command completed\n");
+                return;
+            }
+            else
+            {
+                // Slots are expected to only be 1 character so we only
+                // need to validate that the first character is not a character.
+                strcpy(str, getFieldString(data, 0));
+                position = getFieldInteger(data, 0);
+
+                if (!isDigitString(str) || position >= MAXSLOTS)
+                {
+                    putsUart0("====================== ERROR ======================\n");
+                    putsUart0("The slot you entered is out of range. Please try again...\n\n");
+                    break;
+                }
+            }
+
+            putsUart0("====================== NOTICE ======================\n");
+            putsUart0("The slot you entered currently belongs to ");
+            putsUart0(SpiceList[position]);
+            putsUart0(".\nWould you like to continue? Press any key to continue or type cancel to return to the Main Menu\n");
+            getUserInput(data);
+
+            if (strcmp(getFieldString(data, 0), "cancel") == 0)
+            {
+                putsUart0("Cancelling...");
+                putsUart0("Command completed\n");
+                return;
+            }
+            // Move to next step in set-up
+            step = 1;
+            putsUart0("Setting up new spice...\n");
+            break;
+        }
+        case 1: // Obtain the name of the new spice
+        {
+            putsUart0("The name of your spice must be less than 15 characters and contain no spaces\n");
+            putsUart0("Enter the name of your spice (or cancel to return): ");
+            getUserInput(data);
+
+            strcpy(str, getFieldString(data, 0));
+
+            if (strcmp(getFieldString(data, 0), "cancel") == 0)
+            {
+                putsUart0("Cancelling...");
+                putsUart0("Command completed\n");
+                return;
+            }
+            else if (strlen(str) > MAXNAMESIZE)
+            {
+                putsUart0("====================== ERROR ======================\n");
+                putsUart0("The name you entered is greater than ");
+                strcpy(str, rusty_itoa(MAXNAMESIZE));
+                putsUart0(str);
+                putsUart0("\nPlease try again or enter cancel to return\n\n");
+                break;
+            }
+            else
+            {
+                putsUart0("The name you entered was: ");
+                putsUart0(str);
+                putsUart0("\nIs this correct? Press any key to continue or type retry to reenter: ");
+                getUserInput(data);
+
+                if (strcmp(getFieldString(data, 0), "retry") == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    if (strcmp(getFieldString(data, 0), "cancel") == 0)
+                    {
+                        putsUart0("Cancelling...");
+                        putsUart0("Command completed\n");
+                        return;
+                    }
+                }
+            }
+            // Write the name to the EEPROM
+            Write_SpiceName(position, (uint8_t*)str);
+            strcpy(SpiceList[position], str);
+            putsUart0("Spice name was successfully updated!\n");
+
+            putsUart0("Would you like to also change the quantity of the spice?\n");
+            putsUart0("Press any key to continue or type done to exit: ");
+            getUserInput(data);
+
+            if (strcmp(getFieldString(data, 0), "done") == 0)
+            {
+                putsUart0("Returning to Main Menu...\n");
+                putsUart0("Command completed\n");
+                return;
+            }
+
+            step = 2;
+            break;
+        }
+        case 2: // Ask if user would like to update the quantity of the slot
+        {
+            putsUart0("Enter the quantity of the spice you have filled to (Max is ");
+            strcpy(str, rusty_itoa(MAXQTY));
+            putsUart0(str);
+            putsUart0(") or type cancel to exit.\n");
+            putsUart0("Enter the quantity of the spice: ");
+            getUserInput(data);
+
+            if (strcmp(getFieldString(data, 0), "cancel") == 0)
+            {
+                putsUart0("Cancelling...");
+                putsUart0("Command completed\n");
+                return;
+            }
+
+            req_amount = getFieldInteger(data, 0);
+
+            if (req_amount > MAXQTY)
+            {
+                putsUart0("====================== NOTICE ======================\n");
+                putsUart0("The entered amount is greater than the max allowed quantity\n");
+                putsUart0("Assuming slot is filled to max capacity\n");
+            }
+
+            Write_SpiceRemQty(position, req_amount);
+            putsUart0("Command completed\n");
+            return;
+        }
+        default:
+            break;
+        }
+
+    }
+    putsUart0("Command completed\n");
+}
+
+void UIRackHome(void)
+{
+    uint16_t error = 0;
+
+    putsUart0("Homing the Rack. Please keep clear of the rack and ensure there are no obstructions\n");
+    error = StepRackHome();
+
+    if (error != 0)
+    {
+        putsUart0("====================== ERROR ======================\n");
+        putsUart0("Rack Homing FAILED. Ensure there is no obstruction\n");
+        putsUart0("on the hall sensors. You may try again or reset the system\n");
+    }
+    else
+    {
+        putsUart0("Homing Completed!\n");
+    }
+
+    putsUart0("Command completed\n");
 }

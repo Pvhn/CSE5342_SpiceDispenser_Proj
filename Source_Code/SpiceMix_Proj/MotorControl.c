@@ -14,6 +14,9 @@
  *========================================================
  */
 uint16_t rack_pos;
+
+// System Calibration Values
+int32_t HOME_OFFSET = -520;
 uint16_t SVO_ENG_POS = 100;
 uint16_t SVO_DIS_POS = 170;
 
@@ -49,7 +52,7 @@ uint16_t StepRackHome(void)
     if (home_status != HOME)
     {
         // Command the Rack Motor to make 3 full rotations
-        CommandMotor(RACK, USTEPFULL360 * 30, 10);
+        CommandMotor(RACK, (USTEPFULL360 * 3 * GEARRATIO), 10);
 
         run_status = GetMotorRunStatus(RACK);
         waitMicrosecond(1000);  // Wait atleast 1ms to allow motor to start running
@@ -84,7 +87,7 @@ uint16_t StepRackHome(void)
         {
 
             waitMicrosecond(100000);  // Wait atleast 1ms to allow motor to start running
-            CommandMotor(RACK, -520, 6);
+            CommandMotor(RACK, HOME_OFFSET, 6);
             //TurnOffMotor(RACK);
             // Reset Rack position to 0 (Home);
             rack_pos = 0;

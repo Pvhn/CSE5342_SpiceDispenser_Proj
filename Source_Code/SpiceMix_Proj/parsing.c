@@ -120,14 +120,13 @@ bool isCommand(USER_DATA *data, char *strcommand, uint8_t minArguments)
         return false;
 }
 
-int8_t identifyCommand(USER_DATA *data, char *commands[], uint8_t min_fields[])
+int8_t identifyCommand(USER_DATA *data, UICmdStructType commands[], uint8_t num_commands)
 {
     parseFields(data);
     int8_t i = 0;
-    int8_t num_commands = sizeof(min_fields) / sizeof(min_fields[0]);
     for(i = 0; i < num_commands; i++)
     {
-        if(isCommand(data, commands[i], min_fields[i]))
+        if(isCommand(data, commands[i].cmd, commands[i].min_fields))
         {
             return i;
         }
