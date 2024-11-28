@@ -617,16 +617,16 @@ uint16_t initSpiceData(void)
  */
 void TestEEPROM(void)
 {
-	int x = 0;
-	RecipeStructType recipe;
-	uint16_t error = 0;
+	//int x = 0;
+	//RecipeStructType recipe;
+	//uint16_t error = 0;
 
-	// Initialize number of recipes to 0.
-	error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
+	//// Initialize number of recipes to 0.
+	//error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
 
-	for (x = 0; x < 3; x++)
-	{
-		error = Write_Recipe(test_recipes[x]);
-		recipe = Read_Recipe(x);
-	}
+	//for (x = 0; x < 3; x++)
+	//{
+	//	error = Write_Recipe(test_recipes[x]);
+	//	recipe = Read_Recipe(x);
+	//}
 }

@@ -190,8 +190,10 @@ void dispenseRecipe(USER_DATA* data)
         // If there is not enough spice notify user and abort dispense
         if (rem_amount < target.Data[i].DataBits.quantity)
         {
-            sprintf(str, "ERROR: There is not enough %s for the requested amount\n", SpiceList[target.Data[i].DataBits.position]);
-            putsUart0(str);
+            putsUart0("====================== ERROR ======================\n");
+            putsUart0("There is not enough ");
+            putsUart0(SpiceList[target.Data[i].DataBits.position]);
+            putsUart0(" for the requested amount\n");
             putsUart0("Please refill the spice \n");
             return;
         }
@@ -213,7 +215,6 @@ void dispenseRecipe(USER_DATA* data)
     putsUart0("Command completed\n");
 }
 
-// NEED TO FIX
 void printRecipe(USER_DATA* data)
 {
     //check <name>
@@ -222,6 +223,8 @@ void printRecipe(USER_DATA* data)
     char str[MAX_CHARS];
     char RecipeName[MAXNAMESIZE];
     uint16_t num_of_stored_recipes = Read_NumofRecipes();
+    RecipeStructType target = { 0, };
+    float quantity = 0;
 
     strcpy(RecipeName, getFieldString(data, 1));
 
@@ -233,9 +236,9 @@ void printRecipe(USER_DATA* data)
         return;
     }
 
-    sprintf(str, "%s found; it includes:\n", RecipeName);
+    sprintf(str, "%s found. It includes:\n", RecipeName);
     putsUart0(str);
-    RecipeStructType target = Read_Recipe(position);
+    target = Read_Recipe(position);
     for (i = 0; i < MAXSLOTS; i++)
     {
         if (target.Data[i].DataBits.quantity == 0)
@@ -243,10 +246,10 @@ void printRecipe(USER_DATA* data)
             break;
         }
 
-        // TBD THIS DOES NOT WORK YET DUE TO SOME UNKNOWN CORRUPTION WITH
-        // THE USAGE OF SPRINTF
+        position = target.Data[i].DataBits.position;
+        quantity = (float) target.Data[i].DataBits.quantity / 2.0;
         // Format the string: Note: Quantity is in half teaspons so divide by 2
-        sprintf(str, "- %f teaspoons of %s \n", (float)(target.Data[i].DataBits.quantity) / 2, SpiceList[target.Data[i].DataBits.position]);
+        sprintf(str, "- %0.1f teaspoons of %s \n", quantity, SpiceList[position]);
         putsUart0(str);
     }
 
@@ -446,7 +449,7 @@ void changeSpice(USER_DATA* data)
     {
         switch (step)
         {
-        case 0:
+        case 0: // Ask the user for the slot they'd like to change
         {
             putsUart0("Please Enter a slot number (0-");
             strcpy(str, rusty_itoa(MAXSLOTS - 1));

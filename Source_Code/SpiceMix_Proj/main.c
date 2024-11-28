@@ -36,7 +36,6 @@ UICmdStructType commands[NUMOFCMDS] =
     {"reset",  1},
 };
 
-// NOT WORKING. NEED TO DEBUG SPRINTF MEMORY CORRUPTION
 void displaySpicePage(void)
 {
     uint8_t i = 0;
@@ -59,6 +58,26 @@ void displaySpicePage(void)
     }
 }
 
+void displayRecipes(void)
+{
+    uint8_t i = 0;
+    char str[MAX_CHARS];
+
+    uint8_t num_recipes = Read_NumofRecipes();
+
+    putsUart0("Here are all the recipes stored (in order).\n");
+    putsUart0("Use check to see what each recipe has: \n");
+
+    for (i = 0; i < num_recipes; i++)
+    {
+        strcpy(str, rusty_itoa(i));
+        putsUart0(str);
+        putsUart0(": ");
+        putsUart0(RecipeList[i]);
+        putsUart0("\n");
+    }
+}
+
 int main(void)
 {
     // Initialize System and Hardware Peripherals
@@ -67,7 +86,7 @@ int main(void)
     ServoInit();
     HallSensorInit();
 
-    // Initialize UART
+    // Initialize UARTspi
     initUart0();
     setUart0BaudRate(115200, 40e6);
 
@@ -132,7 +151,9 @@ int main(void)
                     putsUart0("\n");
                 }
 
+                // Here for now while we make a menu
                 displaySpicePage();
+                displayRecipes();
                 break;
         }
     }
