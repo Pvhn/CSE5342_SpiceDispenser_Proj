@@ -17,6 +17,7 @@ uint16_t rack_pos;
 
 // System Calibration Values
 int32_t HOME_OFFSET = -550;
+int32_t AUG_OFFSET = 320;
 uint16_t SVO_ENG_POS = 100;
 uint16_t SVO_DIS_POS = 160;
 
@@ -196,6 +197,9 @@ void SetAugerPos(uint16_t rotations)
     // Convert angle to microsteps
     int32_t microsteps = (int32_t) delta/MICROSTEPSF;
 
+    // Rotate some additional steps to offset the auger screw for
+    // the next load.
+    microsteps = microsteps + AUG_OFFSET;
     CommandMotor(AUGER, microsteps, 35);
 
     while (status != HALTED)
@@ -207,8 +211,8 @@ void SetAugerPos(uint16_t rotations)
     // does not need to be held in place
     TurnOffMotor(AUGER);
 
-    //Wait half a second to let motor come to a full stop
-    waitMicrosecond(500000);
+    //Wait 10ms for motor to come to a stop
+    waitMicrosecond(10000);
 }
 
 /* =======================================================
@@ -244,10 +248,21 @@ void TestMotors(void)
  */
 void DispenseSequence(uint8_t position, uint16_t quantity)
 {
+    MotorRunStatEnumType status = OFF;
     SetRackPos(position);
     SetServoPos(SVO_ENG_POS);
     SetAugerPos(quantity);
     SetServoPos(SVO_DIS_POS);
+    CommandMotor(AUGER, -AUG_OFFSET, 35);
+
+    while (status != HALTED)
+    {
+        status = GetMotorRunStatus(AUGER);
+    }
+
+    // De-energize the Auger Motor after moving since it
+    // does not need to be held in place
+    TurnOffMotor(AUGER);
 }
 
 

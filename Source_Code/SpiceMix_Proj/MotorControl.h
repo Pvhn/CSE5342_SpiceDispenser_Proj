@@ -31,6 +31,7 @@
 
  // System Calibration Values
 extern int32_t HOME_OFFSET;
+extern int32_t AUG_OFFSET;
 extern uint16_t SVO_ENG_POS;
 extern uint16_t SVO_DIS_POS;
 
