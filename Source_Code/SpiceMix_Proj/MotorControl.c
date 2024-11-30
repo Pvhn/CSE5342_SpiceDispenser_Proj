@@ -7,6 +7,9 @@
  */
 
 #include "MotorControl.h"
+#include "tm4c123gh6pm.h"
+#include "wait.h"
+#include "StepMotor.h"
 #include "Servo.h"
 
 /*========================================================
@@ -16,8 +19,8 @@
 uint16_t rack_pos;
 
 // System Calibration Values
-int32_t HOME_OFFSET = -550;
-int32_t AUG_OFFSET = 320;
+int16_t HOME_OFFSET = -500;
+int16_t AUG_OFFSET = 320;
 uint16_t SVO_ENG_POS = 100;
 uint16_t SVO_DIS_POS = 160;
 

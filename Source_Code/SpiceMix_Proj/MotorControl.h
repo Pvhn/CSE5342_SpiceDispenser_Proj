@@ -9,14 +9,8 @@
 #define MOTORCONTROL_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include "tm4c123gh6pm.h"
-#include "wait.h"
-
 #include "System.h"
-#include "StepMotor.h"
-#include "Servo.h"
 
 /*========================================================
  * Preprocessor Defintions
@@ -30,8 +24,8 @@
  */
 
  // System Calibration Values
-extern int32_t HOME_OFFSET;
-extern int32_t AUG_OFFSET;
+extern int16_t HOME_OFFSET;
+extern int16_t AUG_OFFSET;
 extern uint16_t SVO_ENG_POS;
 extern uint16_t SVO_DIS_POS;
 

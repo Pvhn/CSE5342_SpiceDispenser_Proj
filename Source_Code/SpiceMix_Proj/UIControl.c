@@ -12,11 +12,16 @@
 
 
 #include "UIControl.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include "tm4c123gh6pm.h"
 #include "MotorControl.h"
+
 #include <stdio.h>
-#include "string.h"
-#include "uart0.h"
 #include <ctype.h>
+#include <string.h>
+#include "uart0.h"
+
 
  /*========================================================
   * Variable Definitions
@@ -126,7 +131,6 @@ void getUserInput(USER_DATA* data)
 
 void dispenseSpice(USER_DATA* data)
 {
-    //spice <name> <amount>
     uint8_t position = ERRORMATCH;
     uint16_t req_amount = (uint16_t)getFieldInteger(data, 2);
     uint16_t rem_amount = 0;
@@ -135,25 +139,39 @@ void dispenseSpice(USER_DATA* data)
 
     if (position == ERRORMATCH)
     {
-        putsUart0("dispenseSpice failed to find spice\n");
+        putsUart0("The spice you entered does not exists\n");
+        putsUart0("Use view Spices command to see a list of stored spices\n");
         return;
     }
 
     rem_amount = Read_SpiceRemQty(position);
 
+    // Check if there is enough spice left
     if (rem_amount < req_amount)
     {
+        putsUart0("====================== NOTICE ======================\n");
         putsUart0("There is not enough spice for the requested amount\n");
-        putsUart0("Please refill the spice or enter a smaller quantity\n");
-        return;
+        putsUart0("Would you like to continue anyways?\n");
+        putsUart0("Press any key to continue or type cancel to return\n");
+        getsUart0(data);
+
+        if (strcmp(getFieldString(data, 0), "cancel") == 0)
+        {
+            putsUart0("Cancelling...\n");
+            return;
+        }
+        else
+        {
+            Write_SpiceRemQty(position, 0);
+        }
     }
     else
     {
-        putsUart0("Dispensing Please Wait...\n");
         Write_SpiceRemQty(position, rem_amount - req_amount);
-        DispenseSequence(position, req_amount);
     }
 
+    putsUart0("Dispensing Please Wait...\n");
+    DispenseSequence(position, req_amount);
     putsUart0("Command completed\n");
 }
 
@@ -161,16 +179,18 @@ void dispenseRecipe(USER_DATA* data)
 {
     //recipe <name>
     uint8_t i = 0;
-    char str[MAX_CHARS];
     uint8_t position = ERRORMATCH;
     uint16_t num_of_stored_recipes = Read_NumofRecipes();
     uint16_t rem_amount = 0;
+    // Array used to temporarily store the requested qtys of each
+    uint16_t qtys[MAXSLOTS] = { 0, };
 
     position = nameSearch(getFieldString(data, 1), RecipeList, num_of_stored_recipes);
 
     if (position == ERRORMATCH)
     {
-        putsUart0("dispenseRecipe failed to find recipe\n");
+        putsUart0("Failed to find the recipe. Use the view Recipes\n");
+        putsUart0("command for a list of stored recipes");
         return;
     }
 
@@ -187,18 +207,31 @@ void dispenseRecipe(USER_DATA* data)
         // Read the remaining quantity
         rem_amount = Read_SpiceRemQty(target.Data[i].DataBits.position);
 
-        // If there is not enough spice notify user and abort dispense
+        // If there is not enough spice notify user if they would like to override
         if (rem_amount < target.Data[i].DataBits.quantity)
         {
-            putsUart0("====================== ERROR ======================\n");
+            putsUart0("====================== NOTICE ======================\n");
             putsUart0("There is not enough ");
             putsUart0(SpiceList[target.Data[i].DataBits.position]);
             putsUart0(" for the requested amount\n");
-            putsUart0("Please refill the spice \n");
-            return;
-        }
+            putsUart0("Would you like to continue anyways?\n");
+            putsUart0("Press any key to continue or type cancel to return\n");
+            getsUart0(data);
 
-        Write_SpiceRemQty(target.Data[i].DataBits.position, rem_amount - target.Data[i].DataBits.quantity);
+            if (strcmp(getFieldString(data, 0), "cancel") == 0)
+            {
+                putsUart0("Cancelling...\n");
+                return;
+            }
+
+            // Write remaining amount to 0
+            qtys[i] = 0;
+        }
+        else
+        {
+            // Update the remaining quantity
+            qtys[i] = rem_amount - target.Data[i].DataBits.quantity;
+        }
     }
 
     putsUart0("Dispensing Please Wait...\n");
@@ -210,6 +243,7 @@ void dispenseRecipe(USER_DATA* data)
         }
 
         DispenseSequence(target.Data[i].DataBits.position, target.Data[i].DataBits.quantity);
+        Write_SpiceRemQty(target.Data[i].DataBits.position, qtys[i]);
     }
 
     putsUart0("Command completed\n");
@@ -232,7 +266,8 @@ void printRecipe(USER_DATA* data)
 
     if (position == 255)
     {
-        putsUart0("printRecipe failed to find recipe\n");
+        putsUart0("Failed to find the recipe. Use the view Recipes\n");
+        putsUart0("command for a list of stored recipes");
         return;
     }
 
@@ -270,19 +305,18 @@ void saveRecipe(USER_DATA* data)
     // Save off the Recipe Name
     strcpy((char*)recipe.Name, getFieldString(data, 1));
     number = nameSearch(getFieldString(data, 1), RecipeList, MAXNUMRECP);
-
+    
     // Check if the recipe already exists
-    if (number != 255)
+    if (number != ERRORMATCH)
     {
         putsUart0("====================== NOTICE ======================\n");
         putsUart0("There exists a recipe with the name. Would you like to update it?\n");
-        putsUart0("Press any key to overwrite the existing or type cancel to return\n");
+        putsUart0("Press any key to overwrite the existing or type cancel to return: ");
         getUserInput(data);
 
         if (strcmp(getFieldString(data, 0), "cancel") == 0)
         {
             putsUart0("Cancelling...\n");
-            putsUart0("Command completed\n");
             return;
         }
         else
@@ -373,7 +407,7 @@ void saveRecipe(USER_DATA* data)
 
         if (error)
         {
-            putsUart0("WARNING: There was an issue saving the recipe. You may try again or reset the system");
+            putsUart0("WARNING: There was an issue saving the recipe. You may try again or reset the system\n");
         }
         else
         {
@@ -416,13 +450,15 @@ void initRecipeList(void)
 void refillSpice(USER_DATA* data)
 {
     uint8_t position = ERRORMATCH;
+    uint16_t error = 0;
     uint16_t req_amount = (uint16_t)getFieldInteger(data, 2);
 
     position = nameSearch(getFieldString(data, 1), SpiceList, MAXSLOTS);
 
     if (position == ERRORMATCH)
     {
-        putsUart0("Failed to find the spice. Aborting command.\n");
+        putsUart0("The spice you entered does not exists\n");
+        putsUart0("Use view Spices command to see a list of stored spices\n");
         return;
     }
 
@@ -433,13 +469,25 @@ void refillSpice(USER_DATA* data)
         putsUart0("Assuming slot is filled to max capacity\n");
     }
 
-    Write_SpiceRemQty(position, req_amount);
+    error = Write_SpiceRemQty(position, req_amount);
+
+    if (error)
+    {
+        putsUart0("====================== WARNING ======================\n");
+        putsUart0("There was an issue updating the quantity in the EEPROM\n");
+        putsUart0("You may try again or reset the system\n");
+    }
+    else
+    {
+        putsUart0("Spice Quantity updated!\n");
+    }
     putsUart0("Command completed\n");
 }
 
 void changeSpice(USER_DATA* data)
 {
     uint8_t position = ERRORMATCH;
+    uint16_t error = 0;
     uint16_t req_amount = (uint16_t)getFieldInteger(data, 2);
     char str[MAX_CHARS];
     bool cancel = false;
@@ -540,9 +588,19 @@ void changeSpice(USER_DATA* data)
                 }
             }
             // Write the name to the EEPROM
-            Write_SpiceName(position, (uint8_t*)str);
+            error = Write_SpiceName(position, (uint8_t*)str);
             strcpy(SpiceList[position], str);
-            putsUart0("Spice name was successfully updated!\n");
+
+            if (error)
+            {
+                putsUart0("====================== WARNING ======================\n");
+                putsUart0("There was an issue saving the name to the EEPROM\n");
+                putsUart0("You may try again or reset the system\n");
+            }
+            else
+            {
+                putsUart0("Spice name was successfully updated!\n");
+            }
 
             putsUart0("Would you like to also change the quantity of the spice?\n");
             putsUart0("Press any key to continue or type done to exit: ");
@@ -583,7 +641,19 @@ void changeSpice(USER_DATA* data)
                 putsUart0("Assuming slot is filled to max capacity\n");
             }
 
-            Write_SpiceRemQty(position, req_amount);
+            error = Write_SpiceRemQty(position, req_amount);
+
+            if (error)
+            {
+                putsUart0("====================== WARNING ======================\n");
+                putsUart0("There was an issue updating the quantity in the EEPROM\n");
+                putsUart0("You may try again or reset the system\n");
+            }
+            else
+            {
+                putsUart0("Spice Quantity updated!\n");
+            }
+
             putsUart0("Command completed\n");
             return;
         }
@@ -614,4 +684,190 @@ void UIRackHome(void)
     }
 
     putsUart0("Command completed\n");
+}
+
+void deleteRecipe(USER_DATA* data)
+{
+    RecipeStructType recipe;
+    uint8_t i = 0;
+    uint8_t index = 0;
+    uint8_t number = 255;
+    uint8_t num_recipes = 0;
+    uint16_t error = 0;
+    char str[MAX_CHARS];
+
+    // Save off the Recipe Name
+    strcpy(str, getFieldString(data, 1));
+    number = nameSearch(getFieldString(data, 1), RecipeList, MAXNUMRECP);
+
+    if (number == ERRORMATCH)
+    {
+        putsUart0("Failed to find the recipe. Use the view Recipes\n");
+        putsUart0("command for a list of stored recipes");
+        return;
+    }
+
+    putsUart0("====================== NOTICE ======================\n");
+    putsUart0("This will remove recipe ");
+    putsUart0(str);
+    putsUart0(" from the stored memory. Would you like to continue?\n");
+    putsUart0("Type delete to confirm deletion or press any key to cancel: ");
+    getUserInput(data);
+    putsUart0("\n");
+
+    if (strcmp(getFieldString(data, 0), "delete") == 0)
+    {
+        putsUart0("Deleting recipe. Please Wait...\n");
+
+        num_recipes = Read_NumofRecipes();
+
+        // This is an awful way of doing this but couldn't think
+        // of a better way without getting too convoluted.
+        // If a recipe is being deleted from the middle of the blocks
+        // we must copy and move up each recipe below it...
+        for (index = number; index < num_recipes; index++)
+        {
+            error = Delete_Recipe(index);
+
+            // Update the Recipe Dictionary
+            for (i = 0; i < MAXNAMESIZE; i++)
+            {
+                *(RecipeList[index] + i) = '\0';
+            }
+
+            // Perform delete and copy if the deleted recipe
+            // is not at the end of the stored recipe block
+            if(index + 1 != num_recipes)
+            {
+                recipe = Read_Recipe(index +1);
+                error = Write_RecipeX(recipe, index);
+
+                strcpy(RecipeList[index], (char*)recipe.Name);
+            }
+        }
+
+        error = Update_NumRecipes(num_recipes - 1);
+
+
+
+        if (error)
+        {
+            putsUart0("====================== WARNING ======================\n");
+            putsUart0("There was an issue deleting the recipe from the EEPROM\n");
+            putsUart0("You may try again or reset the system\n");
+        }
+        else
+        {
+            putsUart0("Recipe was deleted!\n");
+        }
+    }
+    else
+    {
+        putsUart0("Cancelling...\n");
+        return;
+    }
+    
+
+    putsUart0("Command completed\n");
+}
+
+void resetSystem(USER_DATA* data)
+{
+    putsUart0("====================== WARNING ======================\n");
+    putsUart0("This will reset the system to the default values.\n");
+    putsUart0("This will remove all stored recipes and spices.\n");
+    putsUart0("Do you want to continue?\n");
+    putsUart0("Enter RESET_SYSTEM_X342 to confirm or press any key to cancel: ");
+    getsUart0(data);
+
+    if (strcmp(getFieldString(data, 0), "RESET_SYSTEM_X342") == 0)
+    {
+        putsUart0("Reset Key Confirmed. Starting Reset...\n");
+        initSpiceData(true);
+
+        // Put the system into a forever loop to force user to restart.
+        putsUart0("System Reset Complete. Please restart the system\n");
+        //while (1);
+    }
+    else
+    {
+        putsUart0("Aborting Command...\n");
+    }
+}
+
+void viewItems(USER_DATA* data)
+{
+    char str[MAX_CHARS];
+
+    strcpy(str, getFieldString(data, 1));
+
+    if (strcmp(str, "spices") == 0)
+    {
+        displaySpices();
+    }
+    else if (strcmp(str, "recipes") == 0)
+    {
+        displayRecipes();
+    }
+    else
+    {
+        putsUart0("====================== ERROR ======================\n");
+        putsUart0("View Spices or view Recipes must be specified.\n");
+
+    }
+}
+
+void displaySpices(void)
+{
+    uint8_t i = 0;
+    char str[MAX_CHARS];
+    uint16_t rem_amount = 0;
+    putsUart0("Here are all the current spices and the remaining quantities.\n");
+    putsUart0("Note: All quantities shown are half-teaspoons.\n");
+
+    for (i = 0; i < MAXSLOTS; i++)
+    {
+        rem_amount = Read_SpiceRemQty(i);
+        strcpy(str, rusty_itoa(i));
+        putsUart0(str);
+        putsUart0(": ");
+        putsUart0(SpiceList[i]);
+        putsUart0("\tQty: ");
+        strcpy(str, rusty_itoa(rem_amount));
+        putsUart0(str);
+        putsUart0("\n");
+    }
+}
+
+void displayRecipes(void)
+{
+    uint8_t i = 0;
+    char str[MAX_CHARS];
+
+    uint8_t num_recipes = Read_NumofRecipes();
+
+    if (num_recipes != 0)
+    {
+        putsUart0("Here are all the recipes stored.\n");
+        putsUart0("Use the check command to see what each recipe has: \n");
+
+        for (i = 0; i < num_recipes; i++)
+        {
+            strcpy(str, rusty_itoa(i));
+            putsUart0(str);
+            putsUart0(": ");
+            putsUart0(RecipeList[i]);
+            putsUart0("\n\n");
+        }
+    }
+    else
+    {
+        putsUart0("There are no stored recipes. Use the save command\n");
+        putsUart0("to save a new recipe.\n");
+    }
+}
+
+void calibrate(USER_DATA* data)
+{
+
 }

@@ -9,23 +9,23 @@
 #define EEPROMCONTROL_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
 
 #include "System.h"
-#include "eeprom.h"
 
 /*========================================================
  * Preprocessor Defintions
  *========================================================
  */
 
-// Offsets to EEPROM Data blocks
-#define SPICENMOFST 0x0000
-#define SPICEDATOFST 0x0020
+// Address offsets to EEPROM Data blocks
+#define SPICENMADDR 0x0000
+#define SPICEDATADDR 0x0020
 #define SPICEINITOFST 0x002F
 #define NUMOFRECOFST 0x04
+#define CALIBHOMEOFST 0x05
+#define CALIBSVOOFST 0x06
 #define RECBLKADDR 0x0030
 #define RECBLKSIZE 0x08
 
@@ -89,12 +89,16 @@ extern uint8_t *Read_SpiceName(uint8_t position);
 extern uint8_t *Read_RecipeName(uint8_t position);
 
 // Write functions return an error code
-extern uint16_t initSpiceData(void);
+extern uint16_t initSpiceData(bool reset);
 extern uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty);
 extern uint16_t Write_Recipe(RecipeStructType recipe);
 extern uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number);
 extern uint16_t Write_SpiceName(uint8_t position, uint8_t *name);
 extern uint16_t Update_RecipeName(uint8_t number, uint8_t* name);
+extern uint16_t Update_NumRecipes(uint8_t number);
+extern uint16_t Delete_Recipe(uint8_t number);
+extern uint16_t Write_CalibVal(uint16_t type, int16_t value);
+extern int16_t Read_CalibVal(uint16_t type);
 extern void TestEEPROM(void);
 
 #endif /* EEPROMCONTROL_H_ */

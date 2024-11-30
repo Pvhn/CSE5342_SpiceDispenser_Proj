@@ -8,10 +8,7 @@
 #ifndef UICONTROL_H_
 #define UICONTROL_H_
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include "tm4c123gh6pm.h"
+
 
 #include "System.h"
 #include "eepromControl.h"
@@ -173,5 +170,17 @@ extern void refillSpice(USER_DATA* data);
 extern void changeSpice(USER_DATA* data);
 
 extern void deleteRecipe(USER_DATA* data);
+
+extern void resetSystem(USER_DATA* data);
+
+extern void viewItems(USER_DATA* data);
+
+extern void displaySpices(void);
+
+extern void displayRecipes(void);
+
+extern void calibrate(USER_DATA* data);
+
+
 
 #endif /* UICONTROL_H_ */

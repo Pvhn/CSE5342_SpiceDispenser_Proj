@@ -11,6 +11,7 @@
 
 
 #include "eepromControl.h"
+#include "eeprom.h"
 
  /*========================================================
   * Variable Definitions
@@ -28,14 +29,6 @@ SpiceStructType DefaultSpices[MAXSLOTS] =
 	{"OREGANO", 0x305},
 	{"THYME", 0x306},
 	{"ROSEMARY", 0x307},
-};
-
-// Recipes for testing EEPROM
-RecipeStructType test_recipes[3] =
-{
-	{"CAJUN", {0x41, 0x12}},
-	{"ITALIAN", {0x63, 0x24, 0x55, 0x16}},
-	{"5SPICE", {0x27, 0x10, 0x42}}
 };
 
 /*========================================================
@@ -195,7 +188,7 @@ uint16_t Read_SpiceRemQty(uint8_t position)
 	// Divide Position by 2 to determine Word Offset
 	uint16_t offset = position >> 1;
 
-	data.FullWord = readEeprom(SPICEDATOFST + offset);
+	data.FullWord = readEeprom(SPICEDATADDR + offset);
 
 	// Validate the position is within range
 	if (position > MAXSLOTS - 1)
@@ -230,7 +223,7 @@ uint16_t Read_NumofRecipes(void)
 {
 	EEPROMDataBlockType data;
 
-	data.FullWord = readEeprom(SPICEDATOFST + NUMOFRECOFST);
+	data.FullWord = readEeprom(SPICEDATADDR + NUMOFRECOFST);
 
 	return data.HalfWord.Lower16Bits;
 }
@@ -251,7 +244,7 @@ uint8_t* Read_SpiceName(uint8_t position)
 {
 	uint16_t offset = 0;
 
-	offset = (SPICENMOFST) + (position * 0x04);
+	offset = (SPICENMADDR) + (position * 0x04);
 
 	// Validate the provided position
 	if (position > MAXSLOTS - 1)
@@ -354,7 +347,7 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	// Make a copy of the current 32-bit word in the EEPROM,
 	// since spice data is only 16 bits and we do not want to overwrite
 	// the other data.
-	eeprom_data.FullWord = readEeprom(SPICEDATOFST + offset);
+	eeprom_data.FullWord = readEeprom(SPICEDATADDR + offset);
 
 	if (position > MAXSLOTS - 1)
 	{
@@ -372,7 +365,7 @@ uint16_t Write_SpiceRemQty(uint8_t position, uint16_t qty)
 	}
 
 	// Write the Data to the EEPROM. (NOTE THIS IS A BLOCKING FUNCTION)
-	error = writeEeprom(SPICEDATOFST + offset, eeprom_data.FullWord);
+	error = writeEeprom(SPICEDATADDR + offset, eeprom_data.FullWord);
 
 	// Return Error Flag if any
 	return error;
@@ -450,7 +443,7 @@ uint16_t Write_RecipeX(RecipeStructType recipe, uint16_t number)
 		{
 			number = stored_num;
 		    // Write the remaining recipe number
-		    error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, number+1);
+		    error = writeEeprom(SPICEDATADDR + NUMOFRECOFST, number+1);
 		}
 	}
 
@@ -509,7 +502,7 @@ uint16_t Write_SpiceName(uint8_t position, uint8_t *name)
 	uint16_t offset = 0;
 	uint16_t error = 0;
 
-	offset = (SPICENMOFST)+(position * 0x04);
+	offset = (SPICENMADDR)+(position * 0x04);
 
 	error = Write_NameEEProm(offset, name);
 
@@ -539,18 +532,61 @@ uint16_t Update_RecipeName(uint8_t number, uint8_t *name)
 	return error;
 }
 
+uint16_t Update_NumRecipes(uint8_t number)
+{
+	uint16_t error = 0;
+
+	// Initialize number of recipes to 0.
+	error = writeEeprom(SPICEDATADDR + NUMOFRECOFST, number);
+
+	return error;
+}
+/*=======================================================
+ * Function Name: Delete_Recipe
+ *=======================================================
+ * Parameters: number
+ * Return: error
+ * Description:
+ * This function removes a recipe from the EEPROM
+ * by effectively writing the default value (0xFFFFFFFF)
+ * to the EEPROM.
+ * An error code is returned if there was an issue writing
+ * to the EEPROM.
+ *=======================================================
+ */
+uint16_t Delete_Recipe(uint8_t number)
+{
+	uint16_t indx = 0;
+	uint16_t offset = 0;
+	uint16_t error = 0;
+
+	// Calculate offset to the Recipe Block then write
+	offset = (number * RECBLKSIZE) + RECBLKADDR;
+
+	for (indx = 0; indx < RECBLKSIZE; indx++)
+	{
+		error = writeEeprom(offset, 0xFFFFFFFF);
+		offset = offset + 1;
+	}
+
+	return error;
+}
+
 /*=======================================================
  * Function Name:initSpiceData
  *=======================================================
- * Parameters: None
+ * Parameters: reset
  * Return: error
  * Description:
  * This function initializes the Spice Data Blocks
  * in the EEPROM with the default spices and quantities
- * when it is the first time the system has powered on. 
+ * when it is the first time the system has powered on or
+ * a system reset has been requested (reset = true).
+ * An error code is returned if there was an issue writing
+ * to the EEPROM.
  *=======================================================
  */
-uint16_t initSpiceData(void)
+uint16_t initSpiceData(bool reset)
 {
 	EEPROMDataBlockType FirstPowerUp;
 	EEPROMDataBlockType data;
@@ -561,9 +597,9 @@ uint16_t initSpiceData(void)
 	// Read the First PowerUp Flag
 	FirstPowerUp.FullWord = readEeprom(SPICEINITOFST);
 
-	// If the FirstPowerUp flag doesn't match key
+	// If the FirstPowerUp flag doesn't match start-up key OR if a reset is requested
 	// initialize the EEPROM Spice Blocks using the defaults
-	if (FirstPowerUp.FullWord != 0xBEEF)
+	if (FirstPowerUp.FullWord != 0xBEEF || reset == true)
 	{
 		// Write Init Key value for next power up state.
 		error = writeEeprom(SPICEINITOFST, 0xBEEF);
@@ -591,7 +627,7 @@ uint16_t initSpiceData(void)
 			}
 
 			// Write the spice data and check for error. Abort if error
-			error = writeEeprom(SPICEDATOFST + offset, data.FullWord);
+			error = writeEeprom(SPICEDATADDR + offset, data.FullWord);
 			if (error != 0)
 			{
 				break;
@@ -599,8 +635,17 @@ uint16_t initSpiceData(void)
 		}
 
 		// Initialize number of recipes to 0.
-		error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
+		error = writeEeprom(SPICEDATADDR + NUMOFRECOFST, 0);
+
+		// Remove all recipes. (For when a system reset is requested).
+		for (pos = 0; pos < MAXNUMRECP; pos++)
+		{
+			Delete_Recipe(pos);
+		}
 	}
+
+	//Uncomment this for debugging
+	//TestEEPROM();
 
 	return error;
 }
@@ -617,16 +662,98 @@ uint16_t initSpiceData(void)
  */
 void TestEEPROM(void)
 {
-	//int x = 0;
-	//RecipeStructType recipe;
-	//uint16_t error = 0;
+	// Recipes for testing EEPROM
+	RecipeStructType test_recipes[8] =
+	{
+		{"CAJUN", {0x41, 0x12}},
+		{"ITALIAN", {0x63, 0x24, 0x55, 0x16}},
+		{"BEEF", {0x123, 0x456, 0x789}},
+		{"ABCD1234", {0xABC, 0xDEF, 0xBEEF}},
+		{"LOL", {0xDEAD, 0xFACE, 0xBABE}},
+		{"FEISTY", {0xBEAD, 0xDEAF, 0xCEED}},
+		{"REC4", {0xBEAC, 0x1234, 0x5678}},
+		{"REC5", {0xBADE, 0xDADE, 0xCACE}},
+	};
 
-	//// Initialize number of recipes to 0.
-	//error = writeEeprom(SPICEDATOFST + NUMOFRECOFST, 0);
+	int x = 0;
+	uint16_t error = 0;
 
-	//for (x = 0; x < 3; x++)
-	//{
-	//	error = Write_Recipe(test_recipes[x]);
-	//	recipe = Read_Recipe(x);
-	//}
+	// Initialize number of recipes to 0.
+	error = writeEeprom(SPICEDATADDR + NUMOFRECOFST, 0);
+
+	for (x = 0; x < 8; x++)
+	{
+		error = Write_Recipe(test_recipes[x]);
+	}
+}
+
+uint16_t Write_CalibVal(uint16_t type, int16_t value)
+{
+	EEPROMDataBlockType eeprom_data = { 0, };
+	uint16_t offset = 0;
+	uint16_t error = 0;
+
+	switch (type)
+	{
+	case 0: // Home Calibration
+		offset = SPICEDATADDR + CALIBHOMEOFST;
+		// Read the current word since we only need to write to half
+		eeprom_data.FullWord = readEeprom(offset);
+		eeprom_data.HalfWord.Lower16Bits = (uint16_t) value;
+		break;
+	case 1: // Auger Calibration
+		offset = SPICEDATADDR + CALIBHOMEOFST;
+		// Read the current word since we only need to write to half
+		eeprom_data.FullWord = readEeprom(offset);
+		eeprom_data.HalfWord.Upper16Bits = (uint16_t) value;
+		break;
+	case 2: // Servo Enage Calibration
+		offset = SPICEDATADDR + CALIBSVOOFST;
+		// Read the current word since we only need to write to half
+		eeprom_data.FullWord = readEeprom(offset);
+		eeprom_data.HalfWord.Lower16Bits = (uint16_t) value;
+		break;
+	case 3: // Servo Disengage Calibration
+		offset = SPICEDATADDR + CALIBSVOOFST;
+		// Read the current word since we only need to write to half
+		eeprom_data.FullWord = readEeprom(offset);
+		eeprom_data.HalfWord.Upper16Bits = (uint16_t) value;
+		break;
+	}
+
+	// Write the Data to the EEPROM. (NOTE THIS IS A BLOCKING FUNCTION)
+	error = writeEeprom(offset, eeprom_data.FullWord);
+
+	// Return Error Flag if any
+	return error;
+}
+
+int16_t Read_CalibVal(uint16_t type)
+{
+	EEPROMDataBlockType eeprom_data;
+	uint16_t offset = 0;
+	uint16_t error = 0;
+
+	switch (type)
+	{
+	case 0: // Home Calibration
+		offset = SPICEDATADDR + CALIBHOMEOFST;
+		eeprom_data.FullWord = readEeprom(offset);
+		return eeprom_data.HalfWord.Lower16Bits;
+	case 1: // Auger Calibration
+		offset = SPICEDATADDR + CALIBHOMEOFST;
+		eeprom_data.FullWord = readEeprom(offset);
+		return eeprom_data.HalfWord.Upper16Bits;
+	case 2: // Servo Enage Calibration
+		offset = SPICEDATADDR + CALIBSVOOFST;
+		eeprom_data.FullWord = readEeprom(offset);
+		return eeprom_data.HalfWord.Lower16Bits;
+	case 3: // Servo Disengage Calibration
+		offset = SPICEDATADDR + CALIBSVOOFST;
+		eeprom_data.FullWord = readEeprom(offset);
+		return eeprom_data.HalfWord.Upper16Bits;
+	default:
+		break;
+	}
+	return 0;
 }

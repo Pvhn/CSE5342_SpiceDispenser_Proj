@@ -9,10 +9,7 @@
 #define STEPMOTOR_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include "tm4c123gh6pm.h"
-#include "wait.h"
 #include "System.h"
 
 /*========================================================
