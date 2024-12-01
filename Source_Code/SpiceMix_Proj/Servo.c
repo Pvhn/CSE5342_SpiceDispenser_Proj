@@ -86,5 +86,5 @@ void SetServoPos(uint16_t angle)
     WTIMER3_TAMATCHR_R = duty;
     WTIMER3_TBMATCHR_R = duty;
 
-    waitMicrosecond(1000000);
+    waitMicrosecond(800000);
 }

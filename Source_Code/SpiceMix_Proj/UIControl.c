@@ -157,7 +157,7 @@ void dispenseSpice(USER_DATA* data)
 
         if (strcmp(getFieldString(data, 0), "cancel") == 0)
         {
-            putsUart0("Cancelling...\n");
+            putsUart0("Canceling...\n");
             return;
         }
         else
@@ -220,7 +220,7 @@ void dispenseRecipe(USER_DATA* data)
 
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...\n");
+                putsUart0("Canceling...\n");
                 return;
             }
 
@@ -301,6 +301,7 @@ void saveRecipe(USER_DATA* data)
     bool exists = false;
     bool update = false;
     uint16_t error = 0;
+    char str[MAX_CHARS];
 
     // Save off the Recipe Name
     strcpy((char*)recipe.Name, getFieldString(data, 1));
@@ -316,7 +317,7 @@ void saveRecipe(USER_DATA* data)
 
         if (strcmp(getFieldString(data, 0), "cancel") == 0)
         {
-            putsUart0("Cancelling...\n");
+            putsUart0("Canceling...\n");
             return;
         }
         else
@@ -327,7 +328,10 @@ void saveRecipe(USER_DATA* data)
 
     while (index < MAXSLOTS)
     {
-        putsUart0("Enter a spice followed by a quantity (less than 48)\n");
+        putsUart0("Enter a spice followed by a quantity (less than");
+        strcpy(str, rusty_itoa(MAXQTY));
+        putsUart0(str);
+        putsUart0(")\n");
         putsUart0("Or type done when all spices have been entered\n");
         getUserInput(data);
 
@@ -339,7 +343,7 @@ void saveRecipe(USER_DATA* data)
         {
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...");
+                putsUart0("Canceling...");
                 putsUart0("Command completed\n");
                 return;
             }
@@ -360,7 +364,7 @@ void saveRecipe(USER_DATA* data)
         else if (getFieldInteger(data, 1) > MAXQTY)
         {
             putsUart0("====================== ERROR ======================\n");
-            putsUart0("The quantity entered must be less than 48. Please try again...\n\n");
+            putsUart0("The quantity entered must be less than 96. Please try again...\n\n");
         }
         else
         {
@@ -507,7 +511,7 @@ void changeSpice(USER_DATA* data)
 
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...");
+                putsUart0("Canceling...");
                 putsUart0("Command completed\n");
                 return;
             }
@@ -534,7 +538,7 @@ void changeSpice(USER_DATA* data)
 
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...");
+                putsUart0("Canceling...");
                 putsUart0("Command completed\n");
                 return;
             }
@@ -553,7 +557,7 @@ void changeSpice(USER_DATA* data)
 
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...");
+                putsUart0("Canceling...");
                 putsUart0("Command completed\n");
                 return;
             }
@@ -581,7 +585,7 @@ void changeSpice(USER_DATA* data)
                 {
                     if (strcmp(getFieldString(data, 0), "cancel") == 0)
                     {
-                        putsUart0("Cancelling...");
+                        putsUart0("Canceling...");
                         putsUart0("Command completed\n");
                         return;
                     }
@@ -627,7 +631,7 @@ void changeSpice(USER_DATA* data)
 
             if (strcmp(getFieldString(data, 0), "cancel") == 0)
             {
-                putsUart0("Cancelling...");
+                putsUart0("Canceling...");
                 putsUart0("Command completed\n");
                 return;
             }
@@ -763,7 +767,7 @@ void deleteRecipe(USER_DATA* data)
     }
     else
     {
-        putsUart0("Cancelling...\n");
+        putsUart0("Canceling...\n");
         return;
     }
     
@@ -787,7 +791,7 @@ void resetSystem(USER_DATA* data)
 
         // Put the system into a forever loop to force user to restart.
         putsUart0("System Reset Complete. Please restart the system\n");
-        //while (1);
+        while (1);
     }
     else
     {

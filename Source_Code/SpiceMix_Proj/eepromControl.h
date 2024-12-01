@@ -32,7 +32,7 @@
 // Max System Values
 #define MAXNAMESIZE 16
 #define MAXSLOTS 8
-#define MAXQTY 48
+#define MAXQTY 96 // Quantity is in half-teaspoons
 
 /* Max Number of Stored Recipes
  * Calculated as (16-3)*2. Minus 3 since the first

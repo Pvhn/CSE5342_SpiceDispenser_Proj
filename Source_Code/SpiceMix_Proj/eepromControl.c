@@ -21,14 +21,14 @@
 // Default Spices
 SpiceStructType DefaultSpices[MAXSLOTS] =
 {
-	{"SALT", 0x300},
-	{"BLACKPEPPER", 0x301},
-	{"GARLIC", 0x302},
-	{"PAPRIKA", 0x303},
-	{"ONION", 0x304},
-	{"OREGANO", 0x305},
-	{"THYME", 0x306},
-	{"ROSEMARY", 0x307},
+	{"SALT", 0x600},
+	{"BLACKPEPPER", 0x601},
+	{"GARLIC", 0x602},
+	{"PAPRIKA", 0x603},
+	{"ONION", 0x604},
+	{"OREGANO", 0x605},
+	{"THYME", 0x606},
+	{"ROSEMARY", 0x607},
 };
 
 /*========================================================

@@ -170,6 +170,7 @@ int main(void)
                 resetSystem(&data);
                 break;
             case 10:
+                putsUart0("Turning Off all Motors\n");
                 TurnOffMotor(RACK);
                 TurnOffMotor(AUGER);
                 homing_performed = false;

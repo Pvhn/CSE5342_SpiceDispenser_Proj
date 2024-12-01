@@ -21,7 +21,7 @@ uint16_t rack_pos;
 // System Calibration Values
 int16_t HOME_OFFSET = -500;
 int16_t AUG_OFFSET = 320;
-uint16_t SVO_ENG_POS = 100;
+uint16_t SVO_ENG_POS = 90;
 uint16_t SVO_DIS_POS = 160;
 
 
