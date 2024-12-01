@@ -304,7 +304,9 @@ void saveRecipe(USER_DATA* data)
     char str[MAX_CHARS];
 
     // Save off the Recipe Name
-    strcpy((char*)recipe.Name, getFieldString(data, 1));
+    strcpy(str, getFieldString(data, 1));
+    strcpy((char *)recipe.Name, getFieldString(data, 1));
+
     number = nameSearch(getFieldString(data, 1), RecipeList, MAXNUMRECP);
     
     // Check if the recipe already exists
@@ -322,8 +324,21 @@ void saveRecipe(USER_DATA* data)
         }
         else
         {
+
             update = true;
         }
+    }
+
+    // Validate name was within the given size.
+    if (strlen(str) > MAXNAMESIZE)
+    {
+        putsUart0("====================== ERROR ======================\n");
+        putsUart0("The name you entered is greater than ");
+        strcpy(str, rusty_itoa(MAXNAMESIZE));
+        putsUart0(str);
+        putsUart0(" characters\n");
+        putsUart0("Aborting command...\n");
+        return;
     }
 
     while (index < MAXSLOTS)

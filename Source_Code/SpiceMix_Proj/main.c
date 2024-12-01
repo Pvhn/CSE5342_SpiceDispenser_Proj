@@ -174,6 +174,7 @@ int main(void)
                 TurnOffMotor(RACK);
                 TurnOffMotor(AUGER);
                 homing_performed = false;
+                break;
             default:
                 putsUart0("ERROR: Command not recognized.\n");
                 displayHelpPage();
