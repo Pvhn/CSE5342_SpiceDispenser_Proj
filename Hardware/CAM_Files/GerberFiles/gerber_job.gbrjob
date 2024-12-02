@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2024-12-02T23:22:13Z",
+        "GenerationSoftware": {
+            "Application": "Fusion Electronics",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.57,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "MainBoard v15"
+        },
+        "Owner": "peter nguyen <peter.nguyen3@mavs.uta.edu>",
+        "Size": {
+            "X": 73.1,
+            "Y": 70
+        }
+    }
+}
