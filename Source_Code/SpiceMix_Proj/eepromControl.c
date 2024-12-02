@@ -85,6 +85,17 @@ uint8_t* Read_NameEEProm(uint16_t offset)
 	return name;
 }
 
+/*=======================================================
+ * Function Name: Read_RecipeName
+ *=======================================================
+ * Parameters: offset
+ * Return: name
+ * Description:
+ * This function reads the name of a requested recipe in
+ * the EEPROM. A pointer to the read string is passed
+ * back to the calling function
+ *=======================================================
+ */
 uint8_t* Read_RecipeName(uint8_t number)
 {
     uint16_t offset = 0;
@@ -657,7 +668,10 @@ uint16_t initSpiceData(bool reset)
  * Return: None
  * Description:
  * This function is for debugging purposes and is used
- * to verify functionality of the EEPROM.
+ * to verify functionality of the EEPROM. The function will
+ * write a set of recipes to the EEPROM.
+ * The recipes can then be read back to validate EEPROM
+ * storage.
  *=======================================================
  */
 void TestEEPROM(void)

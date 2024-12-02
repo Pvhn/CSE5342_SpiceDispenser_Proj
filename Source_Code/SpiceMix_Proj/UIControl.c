@@ -767,8 +767,6 @@ void deleteRecipe(USER_DATA* data)
 
         error = Update_NumRecipes(num_recipes - 1);
 
-
-
         if (error)
         {
             putsUart0("====================== WARNING ======================\n");

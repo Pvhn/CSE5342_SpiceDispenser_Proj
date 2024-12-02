@@ -35,7 +35,7 @@ MotorDataStructType MotorData[2] =
   * Return: None
   * Description: Initializes the peripherals needed for
   * Stepper Motor Control. The system utilizes two stepper
-  * motors. This will initialize Port B0-3 and PortF0-3
+  * motors. This will initialize Port B5-7 and PortF0-3
   * for the motor output. Additionally PWM module 0 (PB4-7)
   * are initialized for PWM control
   * =======================================================
@@ -48,20 +48,20 @@ void StepMotorInit(void)
     _delay_cycles(3);
 
     // Initialize PORTB (Motor Output and PWM Control)
-    GPIO_PORTB_DIR_R |= 0xE0;           // Enable PB0-7 as outputs
+    GPIO_PORTB_DIR_R |= 0xE0;           // Enable PB5-7 as outputs
     GPIO_PORTB_DEN_R |= 0xE0;           // Set Digital Enable
-    GPIO_PORTB_AFSEL_R |= 0x40;         // Enable Alternate Function (for PWM) PORTB4-7
+    GPIO_PORTB_AFSEL_R |= 0x40;         // Enable Alternate Function (for PWM) PORTB6
     GPIO_PORTB_PCTL_R &= ~0x0F000000;   // Clear bits for enabling
-    GPIO_PORTB_PCTL_R |= 0x04000000;    // Enable M0PWM0-3 (PB4-7)
+    GPIO_PORTB_PCTL_R |= 0x04000000;    // Enable M0PWM0 (PB6))
 
     // Initialize PORTF (Motor Output 2)
     GPIO_PORTF_LOCK_R = 0x4C4F434B;     // Unlock PORTF0
     GPIO_PORTF_CR_R |= 0x01;            // Unlock PORTF0
-    GPIO_PORTF_DIR_R |= 0x07;           // Enable PORTF0,1,2,3 as outputs
-    GPIO_PORTF_DEN_R |= 0x07;           // Enable PORTF0,1,2,3 as digital pins
-    GPIO_PORTF_AFSEL_R |= 0x01;         // Enable Alternate Function (for PWM) PORTF0-3
+    GPIO_PORTF_DIR_R |= 0x07;           // Enable PORTF0,1,2, as outputs
+    GPIO_PORTF_DEN_R |= 0x07;           // Enable PORTF0,1,2 as digital pins
+    GPIO_PORTF_AFSEL_R |= 0x01;         // Enable Alternate Function (for PWM) PORTF0-2
     GPIO_PORTF_PCTL_R &= ~0x0005;       // Clear bits for enabling
-    GPIO_PORTF_PCTL_R |= 0x0005;        // Enable M1PWM0-3 (PF0-3)
+    GPIO_PORTF_PCTL_R |= 0x0005;        // Enable M1PWM2 (PF0)
 
     // Initialize PWM Module 0
     SYSCTL_SRPWM_R = SYSCTL_SRPWM_R0| SYSCTL_SRPWM_R1;   // Reset PWM1 module
@@ -110,11 +110,13 @@ void StepMotorInit(void)
 }
 
 /* =======================================================
- * Function Name:
+ * Function Name: HallSensorInit
  * =======================================================
  * Parameters: None
  * Return: None
- * Description:
+ * Description: This function initializes the peripherals
+ * needed for the hall sensor detection. This will
+ * initialize PORTB0 and 1 for the hall sensor.
  * =======================================================
  */
 void HallSensorInit(void)
@@ -137,6 +139,18 @@ void HallSensorInit(void)
     NVIC_EN0_R |= 1 << (INT_GPIOB - 16);    // Enable interrupts for Port D
 }
 
+/* =======================================================
+ * Function Name: CommandMotor
+ * =======================================================
+ * Parameters: MotorID, microsteps, speed
+ * Return: None
+ * Description: This function will begin the process of
+ * commanding a stepper motor specified by the motorID.
+ * The function will set the direction pins and enable 
+ * the requested motor. The function will also enable the
+ * corresponding PWM interrupt to begin the motor command.
+ * =======================================================
+ */
 void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
 {
     uint32_t dir = CW;
@@ -173,12 +187,14 @@ void CommandMotor(uint32_t motorID, int32_t microsteps, uint16_t speed)
 /* =======================================================
  * Function Name: SetMotorSpd
  * =======================================================
- * Parameters: motor, CoilASpd, CoilBSpd
+ * Parameters: motorID, speed
  * Return: None
  * Description:
  * This function sets the PWM output for the specified
- * Stepper Motor which is used to control the current
- * that each of the stepper motor coils will receive.
+ * Stepper Motor. The function will save the speed to the
+ * corresponding motor data struct which will then be
+ * used by the PWM Interrupt handler to set the desired
+ * speed.
  * =======================================================
  */
 void SetMotorSpd(uint32_t motorID, uint16_t speed)
@@ -193,6 +209,18 @@ void SetMotorSpd(uint32_t motorID, uint16_t speed)
     }
 }
 
+/* =======================================================
+ * Function Name: TurnOffMotor
+ * =======================================================
+ * Parameters: motorID
+ * Return: None
+ * Description:
+ * This function will disable the specified motor. 
+ * The function will disable the corresponding PWM interupt
+ * as well as disable the PWM Outputs and stepper driver
+ * which will effectively remove all power to the motor.
+ * =======================================================
+ */
 void TurnOffMotor(uint32_t motorID)
 {
     switch (motorID)
@@ -218,16 +246,55 @@ void TurnOffMotor(uint32_t motorID)
     MotorData[motorID].runstatus = OFF;
 }
 
+/* =======================================================
+ * Function Name: GetMotorRunStatus
+ * =======================================================
+ * Parameters: motorID
+ * Return: RunStatus
+ * Description:
+ * This is a helper function to read the current status
+ * of a motor. This is mainly used to prevent unintended
+ * access to the Motor Data Structure by other modules.
+ * =======================================================
+ */
 MotorRunStatEnumType GetMotorRunStatus(uint32_t motorID)
 {
     return MotorData[motorID].runstatus;
 }
 
+
+/* =======================================================
+ * Function Name: GetMotorHomeStatus
+ * =======================================================
+ * Parameters: motorID
+ * Return: RunStatus
+ * Description:
+ * This is a helper function to read the current home status
+ * of a motor. This is mainly used to prevent unintended
+ * access to the Motor Data Structure by other modules.
+ * =======================================================
+ */
 MotorHomeStatEnumType GetMotorHomeStatus(uint32_t motorID)
 {
     return MotorData[motorID].homestatus;
 }
 
+/* =======================================================
+ * Function Name: PWM0Gen0_ISR
+ * =======================================================
+ * Parameters: N/A
+ * Return: N/A
+ * Description:
+ * This is the PWM Interrupt Handler for the Rack Motor.
+ * This will interrupt when the PWM counter is zero. The
+ * primary responsiblities of the interrupt handler is
+ * to manage the steps the motor has moved as well as 
+ * control the speed of the motor. All pertinent data
+ * is provided from the corresponding MotorData structure.
+ * The interrupt will read from this and then save the
+ * updated value.
+ * =======================================================
+ */
 void PWM0Gen0_ISR(void)
 {
     static const uint32_t motorID = 0;
@@ -306,6 +373,22 @@ void PWM0Gen0_ISR(void)
     PWM0_0_ISC_R |= 0x02;
 }
 
+/* =======================================================
+ * Function Name: PWM1Gen2_ISR
+ * =======================================================
+ * Parameters: N/A
+ * Return: N/A
+ * Description:
+ * This is the PWM Interrupt Handler for the Auger Motor.
+ * This will interrupt when the PWM counter is zero. The
+ * primary responsiblities of the interrupt handler is
+ * to manage the steps the motor has moved as well as
+ * control the speed of the motor. All pertinent data
+ * is provided from the corresponding MotorData structure.
+ * The interrupt will read from this and then save the
+ * updated value.
+ * =======================================================
+ */
 void PWM1Gen2_ISR(void)
 {
     static const uint32_t motorID = 1;
@@ -345,17 +428,34 @@ void PWM1Gen2_ISR(void)
     PWM1_2_ISC_R |= 0x02;
 }
 
+/* =======================================================
+ * Function Name: PortBISR
+ * =======================================================
+ * Parameters: N/A
+ * Return: N/A
+ * Description:
+ * This is the GPIO Interrupt Handler for the Hall
+ * Sensors. This will interrupt on either the rising
+ * or falling edge of the two rack hall sensors (PB0/PB1).
+ * The primary responsiblities of the interrupt handler
+ * is to handle the transition of a motor home status
+ * and save the data for use by the main program.
+ * =======================================================
+ */
 void PortBISR(void)
 {
     uint16_t input = HALLSEN;
     MotorHomeStatEnumType homestatus = NOTHOME;
-
+    
+    // If both sensor indicates a detection
     if (input == 0)
     {
         homestatus = HOME;
     }
     else
     {
+        // If atleast one sensor indicates
+        // a detection. Otherwise, homestatus = NOTHOME
         if (input == 0x1 || input == 0x02)
         {
             homestatus = NEARHOME;
@@ -366,8 +466,10 @@ void PortBISR(void)
         }
     }
 
+    // Save the data to the rack motor dta
     MotorData[0].homestatus = homestatus;
 
+    // Clear the interrupt flag.
     GPIO_PORTB_ICR_R |= HALSEN_MASK;
 }
 
